@@ -1,0 +1,15 @@
+CRELab Quest Fix 001
+
+修正內容：
+1. 修正TrainingGames載入時this綁定遺失，導致關卡畫面空白。
+2. 修正Level 13–15設備模式中的event/events變數名稱錯誤。
+
+上傳方式：
+1. 解壓縮本檔。
+2. GitHub repository進入：
+   js → games → training → training-games.js
+3. 點右上角Delete this file刪除舊檔，Commit changes。
+4. 回到training資料夾，Add file → Upload files。
+5. 上傳新的training-games.js並Commit changes。
+6. 等待GitHub Pages重新部署約1–3分鐘。
+7. 開啟網站後按Ctrl+F5強制重新整理。
