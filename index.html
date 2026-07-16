@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#15324a">
+  <meta name="description" content="CRE Lab Quest — 攝護腺癌研究互動闖關遊戲">
+  <title>CRE Lab Quest</title>
+  <link rel="stylesheet" href="./css/base/app.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="CRE Lab Quest 首頁">
+        <span class="brand-mark">CRE</span>
+        <span><strong>Lab Quest</strong><small>Prostate Cancer Research Game</small></span>
+      </a>
+      <div class="top-actions">
+        <button id="usageBtn" class="btn btn-soft">Spark 用量</button>
+        <button id="loginBtn" class="btn btn-soft">遊客模式</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="homeView" class="view active">
+        <div class="hero">
+          <div class="hero-copy">
+            <span class="kicker">140 LEVELS · MOBILE FIRST</span>
+            <h1>從實驗室新手，成為攝護腺癌研究專家</h1>
+            <p>前20關先完成儀器訓練；之後進入14種互動模式與隨機Boss綜合任務。</p>
+            <div class="hero-actions">
+              <button id="continueBtn" class="btn btn-primary btn-large">繼續遊戲</button>
+              <button id="howBtn" class="btn btn-white btn-large">玩法說明</button>
+            </div>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="cell cell-a"></div><div class="cell cell-b"></div><div class="cell cell-c"></div>
+            <div class="dna">AT<br>CG<br>TA<br>GC</div>
+            <div class="microscope">🔬</div>
+          </div>
+        </div>
+
+        <section class="dashboard-grid">
+          <article class="metric"><span>目前關卡</span><strong id="currentLevelMetric">1</strong></article>
+          <article class="metric"><span>解鎖進度</span><strong id="unlockMetric">1 / 140</strong></article>
+          <article class="metric"><span>Research XP</span><strong id="xpMetric">0</strong></article>
+          <article class="metric"><span>Research Rank</span><strong id="rankMetric">Lab Visitor</strong></article>
+        </section>
+
+        <section class="panel map-panel">
+          <div class="panel-heading">
+            <div><span class="kicker">LEVEL MAP</span><h2>關卡地圖</h2></div>
+            <button id="jumpCurrentBtn" class="btn btn-soft">移至目前關卡</button>
+          </div>
+          <div id="levelMap" class="level-map"></div>
+        </section>
+      </section>
+
+      <section id="gameView" class="view">
+        <div class="game-top">
+          <button id="mapBtn" class="btn btn-soft">← 返回地圖</button>
+          <div class="game-title">
+            <span id="gameModeName" class="kicker"></span>
+            <h2 id="gameLevelTitle">Level</h2>
+          </div>
+          <div id="bossTag" class="boss-tag hidden">BOSS</div>
+        </div>
+
+        <section class="score-card">
+          <div class="score-item"><span>Accuracy</span><div class="meter"><i id="accuracyMeter"></i></div><b id="accuracyScore">100</b></div>
+          <div class="score-item"><span>Sample Quality</span><div class="meter"><i id="qualityMeter"></i></div><b id="qualityScore">100</b></div>
+          <div class="score-item"><span>Safety</span><div class="meter"><i id="safetyMeter"></i></div><b id="safetyScore">100</b></div>
+        </section>
+
+        <section id="gameStage" class="game-stage"></section>
+      </section>
+    </main>
+
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <div id="modalIcon" class="modal-icon">🧪</div>
+        <h2 id="modalTitle"></h2>
+        <p id="modalMessage"></p>
+        <div id="modalScores" class="modal-scores"></div>
+        <div class="modal-actions">
+          <button id="retryBtn" class="btn btn-soft">重新挑戰</button>
+          <button id="nextBtn" class="btn btn-primary">下一關</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="drawer" class="drawer hidden">
+      <div class="drawer-card">
+        <button id="closeDrawerBtn" class="drawer-close">×</button>
+        <div id="drawerContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./data/levels/levels.js"></script>
+  <script src="./js/services/storage.js"></script>
+  <script src="./js/services/usage-monitor.js"></script>
+  <script src="./js/games/training/training-games.js"></script>
+  <script src="./js/games/modes/future-modes.js"></script>
+  <script src="./js/games/boss/boss-engine.js"></script>
+  <script src="./js/core/app.js"></script>
+</body>
+</html>
