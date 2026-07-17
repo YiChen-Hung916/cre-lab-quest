@@ -25,7 +25,7 @@
       <section id="homeView" class="view active">
         <div class="hero">
           <div class="hero-copy">
-            <span class="kicker">140 LEVELS · MOBILE FIRST</span>
+            <span class="kicker">MOBILE FIRST · RESEARCH ADVENTURE</span>
             <h1>從實驗室新手，成為攝護腺癌研究專家</h1>
             <p>前20關先完成儀器訓練；之後進入14種互動模式與隨機Boss綜合任務。</p>
             <div class="hero-actions">
@@ -42,7 +42,7 @@
 
         <section class="dashboard-grid">
           <article class="metric"><span>目前關卡</span><strong id="currentLevelMetric">1</strong></article>
-          <article class="metric"><span>解鎖進度</span><strong id="unlockMetric">1 / 140</strong></article>
+          <article class="metric"><span>已完成關卡</span><strong id="unlockMetric">0</strong></article>
           <article class="metric"><span>Research XP</span><strong id="xpMetric">0</strong></article>
           <article class="metric"><span>Research Rank</span><strong id="rankMetric">Lab Visitor</strong></article>
         </section>
@@ -66,10 +66,10 @@
           <div id="bossTag" class="boss-tag hidden">BOSS</div>
         </div>
 
-        <section class="score-card">
-          <div class="score-item"><span>Accuracy</span><div class="meter"><i id="accuracyMeter"></i></div><b id="accuracyScore">100</b></div>
-          <div class="score-item"><span>Sample Quality</span><div class="meter"><i id="qualityMeter"></i></div><b id="qualityScore">100</b></div>
-          <div class="score-item"><span>Safety</span><div class="meter"><i id="safetyMeter"></i></div><b id="safetyScore">100</b></div>
+        <section class="evaluation-note">
+          <span>本關評分項目</span>
+          <strong>Accuracy · Sample Quality · Safety</strong>
+          <small>分數將於任務結束後公布</small>
         </section>
 
         <section id="gameStage" class="game-stage"></section>
@@ -97,6 +97,11 @@
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="./firebase/firebase-config.js"></script>
+  <script src="./firebase/auth-service.js"></script>
   <script src="./data/levels/levels.js"></script>
   <script src="./js/services/storage.js"></script>
   <script src="./js/services/usage-monitor.js"></script>
