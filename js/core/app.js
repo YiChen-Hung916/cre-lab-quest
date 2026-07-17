@@ -85,10 +85,27 @@ function accountPanel(){
 function bindAccountActions(){
   $("#googleLoginAction")?.addEventListener("click",async()=>{try{await AuthService.signIn();location.reload()}catch(error){openDrawer(`<h2>登入失敗</h2><p>${error.message}</p>`)}});
   $("#logoutAction")?.addEventListener("click",async()=>{await AuthService.signOut();state=loadGuestState();location.reload()});
-  $("#developerToggle")?.addEventListener("click",()=>{state.developerMode=!state.developerMode;renderMap();renderMetrics();$("#drawer").classList.add("hidden")});
+  $("#developerToggle")?.addEventListener("click",()=>{
+  state.developerMode = !state.developerMode;
+  renderMap();
+  renderMetrics();
+  updateAccountButton();
+  $("#drawer").classList.add("hidden");
+  });
 }
 function updateAccountButton(){
-  $("#loginBtn").textContent=state.developerMode?"開發者模式":AuthService.user?"已登入":"遊客模式";
+  $("#loginBtn").textContent =
+    state.developerMode
+      ? "開發者模式"
+      : AuthService.user
+        ? "已登入"
+        : "遊客模式";
+
+  // 只有管理員已啟用開發者模式時，才顯示 Spark 用量
+  $("#usageBtn").classList.toggle(
+    "hidden",
+    !(AuthService.isAdmin && state.developerMode)
+  );
 }
 async function bootstrap(){
   const auth=await AuthService.init();
@@ -104,7 +121,10 @@ $("#mapBtn").onclick=()=>{renderMetrics();renderMap();showView("#homeView")};
 $("#retryBtn").onclick=()=>{$("#modal").classList.add("hidden");startLevel(active.level)};
 $("#nextBtn").onclick=()=>{$("#modal").classList.add("hidden");if(active.level<140)startLevel(active.level+1);else{renderMap();renderMetrics();showView("#homeView");openDrawer(`<span class="kicker">TO BE CONTINUED</span><h2>COMING SOON</h2><p>你已完成目前所有研究任務。新的關卡將於後續版本加入。</p>`)}};
 $("#jumpCurrentBtn").onclick=()=>document.querySelector(`[data-level="${state.currentLevel}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
-$("#usageBtn").onclick=()=>openDrawer(renderUsagePanel(state));
+$("#usageBtn").onclick=()=>{
+  if (!(AuthService.isAdmin && state.developerMode)) return;
+  openDrawer(renderUsagePanel(state));
+};
 $("#howBtn").onclick=()=>openDrawer(`<span class="kicker">HOW TO PLAY</span><h2>遊戲方式與通關條件</h2><ul><li>關卡地圖只顯示已完成關卡與下一個待挑戰關卡。</li><li>儀器訓練每關包含3–5個回合，整關完成後才結算。</li><li>系統會依Accuracy、Sample Quality及Safety評分。</li><li>遊戲進行中不顯示分數；結果畫面才會公布。</li><li>三項分數皆須達60才能通關。</li><li>遊客進度保存在目前裝置；登入後可同步至雲端。</li></ul>`);
 $("#loginBtn").onclick=()=>{openDrawer(accountPanel());bindAccountActions()};
 $("#closeDrawerBtn").onclick=()=>$("#drawer").classList.add("hidden");
