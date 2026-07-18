@@ -13,13 +13,11 @@ let scores = {
 };
 let lastReason = "";
 let saveTimer = null;
-
 /*
  * 防止同一關因為重複觸發 complete()
  * 而出現兩次結算、重複加 XP 或重複解鎖。
  */
 let missionFinished = false;
-
 /* =========================================================
    DOM helpers
 ========================================================= */
