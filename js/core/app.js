@@ -36,14 +36,41 @@ function configFor(level) {
 }
 
 function modeName(config) {
-  if (!config) return "";
+  if (!config) {
+    return "";
+  }
+
   if (config.type === "training") {
-    return TRAINING_META[config.mode]?.name || config.mode;
+    const meta =
+      typeof TRAINING_META !== "undefined"
+        ? TRAINING_META
+        : {};
+
+    return (
+      meta?.[config.mode]?.name ||
+      config.mode ||
+      "Training Mission"
+    );
   }
+
   if (config.type === "future") {
-    return FUTURE_META[config.mode]?.name || config.mode;
+    const meta =
+      typeof FUTURE_META !== "undefined"
+        ? FUTURE_META
+        : {};
+
+    return (
+      meta?.[config.mode]?.name ||
+      config.mode ||
+      "Research Mission"
+    );
   }
-  return "Boss Mission";
+
+  if (config.type === "boss") {
+    return "Boss Mission";
+  }
+
+  return config.mode || "Mission";
 }
 function completedCount() {
   return Object.keys(state.completed || {}).length;
@@ -452,9 +479,10 @@ function finish(pass) {
    Start mission
 ========================================================= */
 function startLevel(level) {
-  const config = configFor(level);
+  const numericLevel = Number(level);
+  const config = configFor(numericLevel);
   if (!config) {
-    console.error(`Level ${level} was not found.`);
+    console.error(`Level ${numericLevel} was not found.`);
     return;
   }
   /*
@@ -462,34 +490,52 @@ function startLevel(level) {
    * 都要解除上一關的結算鎖定。
    */
   missionFinished = false;
-
   active = config;
-  state.currentLevel = level;
-  persistState();
+  state.currentLevel = numericLevel;
+
   resetScores();
   const gameModeName = $("#gameModeName");
   const gameLevelTitle = $("#gameLevelTitle");
   const bossTag = $("#bossTag");
   const gameStage = $("#gameStage");
   const modal = $("#modal");
+  const drawer = $("#drawer");
     /*
    * 避免重新開始關卡時，
    * 上一次的結果視窗仍停留在畫面上。
    */
   modal?.classList.add("hidden");
+  drawer?.classList.add("hidden");
+  if (!gameStage) {
+    console.error("#gameStage does not exist.");
+    return;
+  }
+    /*
+   * 先切換至遊戲頁面。
+   * 即使遊戲引擎載入失敗，也能顯示錯誤訊息，
+   * 不會看起來像按鈕完全沒有反應。
+   */
+  gameStage.innerHTML = "";
+
+  showView("#gameView");
 
   if (gameModeName) {
     gameModeName.textContent = modeName(active);
   }
   if (gameLevelTitle) {
-    gameLevelTitle.textContent = active.title;
-  }
-  if (bossTag) {
-    bossTag.classList.toggle(
-      "hidden",
-      active.type !== "boss"
-    );
-  }
+      gameLevelTitle.textContent =
+        active.title ||
+        active.name ||
+        `Level ${active.level}`;
+    }
+
+    if (bossTag) {
+      bossTag.classList.toggle(
+        "hidden",
+        active.type !== "boss"
+      );
+    }
+   
   if (!gameStage) {
     console.error("#gameStage does not exist.");
     return;
@@ -506,26 +552,89 @@ function startLevel(level) {
     complete,
     penalize
   };
+    const context = {
+      config: active,
+      stage: gameStage,
+      complete,
+      penalize
+    };
+    if (active.type === "training") {
+      if (
+        typeof TrainingGames === "undefined" ||
+        typeof TrainingGames.mount !== "function"
+      ) {
+        throw new Error(
+          "TrainingGames.mount() 無法使用。請檢查 training-games.js 是否正確載入。"
+        );
+      }
 
-  if (active.type === "training") {
-    TrainingGames.mount(context);
-    return;
-  }
+      TrainingGames.mount(context);
+    } else if (active.type === "future") {
+      if (
+        typeof FutureModes === "undefined" ||
+        typeof FutureModes.mount !== "function"
+      ) {
+        throw new Error(
+          "FutureModes.mount() 無法使用。請檢查 future-modes.js 是否正確載入。"
+        );
+      }
 
-  if (active.type === "future") {
-    FutureModes.mount(context);
-    return;
-  }
-  if (active.type === "boss") {
-    BossEngine.mount(context);
-    return;
-  }
+      FutureModes.mount(context);
+    } else if (active.type === "boss") {
+      if (
+        typeof BossEngine === "undefined" ||
+        typeof BossEngine.mount !== "function"
+      ) {
+        throw new Error(
+          "BossEngine.mount() 無法使用。請檢查 boss-engine.js 是否正確載入。"
+        );
+      }
 
-  console.error(
-    `Unknown level type: ${active.type}`
-  );
+      BossEngine.mount(context);
+    } else {
+      throw new Error(
+        `Unknown level type: ${active.type}`
+      );
+    }
+
+    persistState();
+  } catch (error) {
+    console.error(
+      `Failed to start level ${active.level}:`,
+      error
+    );
+
+    gameStage.innerHTML = `
+      <div class="game-shell">
+        <div class="event-card">
+          <span class="kicker">LEVEL ERROR</span>
+
+          <h3>關卡無法載入</h3>
+
+          <p>
+            ${escapeHtml(
+              error?.message ||
+              "發生未知錯誤。"
+            )}
+          </p>
+
+          <div class="controls">
+            <button
+              type="button"
+              id="levelErrorBackBtn"
+              class="btn btn-soft"
+            >
+              回到關卡地圖
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    $("#levelErrorBackBtn")
+      ?.addEventListener("click", returnToMap);
+  }
 }
-  /* BossEngine.mount(context);*/
 
 
 /* =========================================================
