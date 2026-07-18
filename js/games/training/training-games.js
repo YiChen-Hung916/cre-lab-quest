@@ -112,7 +112,6 @@ pipette(ctx) {
         <!-- 數值設定 -->
         <div class="control-group">
           <span class="kicker">容量顯示窗</span>
-
           <div class="digit-controls">
             ${[0, 1, 2, 3].map(index => `
               <div class="digit">
@@ -136,8 +135,6 @@ pipette(ctx) {
               </div>
             `).join("")}
           </div>
-
-          <small>目前設定：<strong id="volumeValue">0</strong> μL</small>
         </div>
         <!-- Tip 盒：與數值控制並列 -->
         <div class="control-group">
@@ -174,7 +171,6 @@ pipette(ctx) {
   );
   const status = stage.querySelector("#pipetteStatus");
   const tipStatus = stage.querySelector("#tipStatus");
-  const volumeValue = stage.querySelector("#volumeValue");
   const plungerButton = stage.querySelector("#plungerBtn");
   const tipFill = stage.querySelector("#tipFill");
   function currentVolume() {
@@ -185,9 +181,7 @@ pipette(ctx) {
       digits[3]
     );
   }
-  function updateVolumeDisplay() {
-    volumeValue.textContent = currentVolume();
-  }
+
   /*
    * 選擇 pipette
    */
@@ -295,7 +289,6 @@ pipette(ctx) {
     plungerButton.textContent = "排液完成";
     ctx.complete();
   });
-  updateVolumeDisplay();
 },
   
   serological(ctx){
@@ -315,7 +308,6 @@ pipette(ctx) {
   centrifuge(ctx){
   const randomInt = (min, max) =>
     Math.floor(Math.random() * (max - min + 1)) + min;
-
   const level = ctx.config.level;
   const round = ctx.config.roundIndex || 1;
 
@@ -326,7 +318,6 @@ pipette(ctx) {
    * Lv12以上或較後回合：24孔
    */
   let holes = 8;
-
   if (level >= 12 || (level >= 11 && round >= 3)) {
     holes = 24;
   } else if (level >= 11) {
@@ -334,46 +325,36 @@ pipette(ctx) {
   } else if (level >= 10) {
     holes = 12;
   }
-
   const maximumPairs =
     holes === 8 ? 3 :
     holes === 12 ? 4 :
     holes === 16 ? 6 :
     8;
-
   const difficultyPairs = Math.min(
     maximumPairs,
     Math.max(1, Math.floor((level - 8 + round) / 2))
   );
-
   const pairCount = difficultyPairs;
   const tubeCount = pairCount * 2;
-
   // 可出現的離心條件
   const gOptions = [1000, 1500, 2000, 2500, 3000];
   const timeOptions = [3, 5, 7, 10];
-
   const targetG =
     gOptions[randomInt(0, gOptions.length - 1)];
-
   const targetTime =
     timeOptions[randomInt(0, timeOptions.length - 1)];
-
   /*
    * 每一對 tube 使用相同容量，但不同對之間可以不同。
    * 玩家必須把同容量的 tube 放到正對面。
    */
   const tubes = [];
-
   for (let pair = 0; pair < pairCount; pair++) {
     const volume = randomInt(1, 20) * 50;
-
     tubes.push({
       id: pair * 2 + 1,
       volume,
       pair
     });
-
     tubes.push({
       id: pair * 2 + 2,
       volume,
@@ -386,10 +367,8 @@ pipette(ctx) {
     const j = randomInt(0, i);
     [tubes[i], tubes[j]] = [tubes[j], tubes[i]];
   }
-
   let selectedTube = null;
   const placements = {};
-
   ctx.stage.innerHTML = this.shell(
     "Centrifuge 配平",
     `將 ${tubeCount} 支不同容量的 tube 正確配平，並設定指定離心條件。`,
@@ -402,7 +381,6 @@ pipette(ctx) {
           正對面的 tube 必須具有相同體積。
         </small>
       </div>
-
       <div
         class="centrifuge-rotor rotor-${holes}"
         style="--rotor-holes:${holes}"
@@ -423,7 +401,6 @@ pipette(ctx) {
           `;
         }).join("")}
       </div>
-
       <div class="tube-tray">
         ${tubes.map(tube => `
           <button
@@ -438,7 +415,6 @@ pipette(ctx) {
           </button>
         `).join("")}
       </div>
-
       <div class="centrifuge-controls">
         <label>
           離心力：
@@ -453,11 +429,9 @@ pipette(ctx) {
             value="${targetG}"
           >
         </label>
-
         <label>
           時間：
           <strong><span id="timeText">${targetTime} min</span></strong>
-
           <input
             id="spinTime"
             type="range"
@@ -468,7 +442,6 @@ pipette(ctx) {
           >
         </label>
       </div>
-
       <button type="button" id="spinBtn" class="btn btn-primary">
         啟動離心機
       </button>
@@ -478,11 +451,9 @@ pipette(ctx) {
   ctx.stage.querySelectorAll(".tube-token").forEach(button => {
     button.onclick = () => {
       if (button.disabled) return;
-
       ctx.stage.querySelectorAll(".tube-token").forEach(item => {
         item.classList.remove("selected");
       });
-
       button.classList.add("selected");
       selectedTube = button;
     };
@@ -536,10 +507,8 @@ pipette(ctx) {
     const balanced = occupiedPositions.every(position => {
       const opposite =
         (position + holes / 2) % holes;
-
       const currentTube = placements[position];
       const oppositeTube = placements[opposite];
-
       return (
         oppositeTube &&
         currentTube.volume === oppositeTube.volume
