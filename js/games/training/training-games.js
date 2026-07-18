@@ -853,72 +853,57 @@ const TrainingGames={
 
     const placements={};
 
-    const rotorHolesHtml=
-      Array.from(
-        {length:holes},
-        (_,index)=>{
-          const angle=
-            Math.PI*
-            2*
-            index/
-            holes-
-            Math.PI/2;
+    
+            : 39;
 
-          const radius=
-            holes>=24
-              ?43
-              :holes>=16
-                ?41
-                :39;
+      const left =
+        50 +
+        Math.cos(angle) * radius;
 
-          const left=
-            50+
-            Math.cos(angle)*
-            radius;
+      const top =
+        50 +
+        Math.sin(angle) * radius;
 
-          const top=
-            50+
-            Math.sin(angle)*
-            radius;
-
-          return `
-            <button
-              type="button"
-              class="rotor-hole"
-              data-hole="${index}"
-              style="
-                left:${left}%;
-                top:${top}%;
-                transform:
-                  translate(-50%,-50%)
-                  rotate(${360/holes*index+90}deg);
-              "
-              aria-label="Rotor position ${index+1}"
-            >
-              <span
-                style="
-                  transform:
-                    rotate(-${360/holes*index+90}deg);
-                "
-              >
-                ${index+1}
-              </span>
-            </button>
-          `;
-        }
-      ).join("");
-
+      return `
         <button
-        type="button"
-        class="tube-token"
-        data-tube="${tube.id}"
-        data-pair="${tube.pair}"
-        data-volume="${tube.volume}"
-      >
-        <strong>Tube ${tube.id}</strong>
-        <span>${tube.volume} μL</span>
-      </button>
-    `).join("");
+          type="button"
+          class="rotor-hole"
+          data-hole="${index}"
+          style="
+            left:${left}%;
+            top:${top}%;
+            transform:
+              translate(-50%,-50%)
+              rotate(${360 / holes * index + 90}deg);
+          "
+          aria-label="Rotor position ${index + 1}"
+        >
+          <span
+            style="
+              transform:
+                rotate(-${360 / holes * index + 90}deg);
+            "
+          >
+            ${index + 1}
+          </span>
+        </button>
+      `;
+    }
+  ).join("");
+
+const tubeHtml = tubes.map(tube => `
+  <button
+    type="button"
+    class="tube-token"
+    data-tube="${tube.id}"
+    data-pair="${tube.pair}"
+    data-volume="${tube.volume}"
+  >
+    <strong>Tube ${tube.id}</strong>
+    <span>${tube.volume} μL</span>
+  </button>
+`).join("");
+
 
     ctx.stage.innerHTML=this.shell(
       "Centrifuge 配平",
