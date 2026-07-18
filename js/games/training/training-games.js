@@ -33,10 +33,14 @@ const TrainingGames={
   shell(title,text,inner){
     return `<div class="game-shell"><div class="game-instructions"><h3>${title}</h3><p>${text}</p></div>${inner}</div>`;
   },
-pipette(ctx){
+
+pipette(ctx) {
   const randomInt = (min, max) =>
     Math.floor(Math.random() * (max - min + 1)) + min;
-  // 真正隨機產生 1–1000 μL，不從固定清單抽選
+  /*
+   * 每回合直接隨機產生 1–1000 μL 的整數，
+   * 不是從固定數值清單抽選。
+   */
   const target = randomInt(1, 1000);
   const correct =
     target <= 10
@@ -48,135 +52,212 @@ pipette(ctx){
           : "P1000";
   let selected = null;
   let digits = [0, 0, 0, 0];
-  let tip = false;
-  let liquid = false;
+  let tipInstalled = false;
+  let liquidLoaded = false;
   const stage = ctx.stage;
   stage.innerHTML = this.shell(
     "Micropipette 精準移液",
-    `請選擇正確 pipette 並吸取 ${target} μL。`,
+    `請選擇正確 pipette，設定 ${target} μL，並將液體移入 Tube B。`,
     `
-      <div class="pipette-task">
-        <strong>任務</strong>
-        <span>${target} μL → Tube B</span>
-        <small>建議量程：${correct}</small>
-      </div>
-      <div id="pipetteStatus" class="operation-status">
-        尚未選擇 pipette
-      </div>
-      <div class="pipette-options">
-        ${["P10", "P20", "P200", "P1000"].map(p => `
-          <button type="button" class="pipette" data-p="${p}">
-            <strong>${p}</strong>
-            <small>
-              ${
-                p === "P10"
-                  ? "0.5–10"
-                  : p === "P20"
-                    ? "2–20"
-                    : p === "P200"
-                      ? "20–200"
-                      : "100–1000"
-              } μL
-            </small>
-          </button>
-        `).join("")}
-      </div>
-      
-      <div class="volume-display">
-        <strong>容量顯示窗</strong>
-        <div class="digit-display">
-          ${[0, 1, 2, 3].map(i => `
-            <div class="digit">
-              <button
-                type="button"
-                data-i="${i}"
-                data-dir="1"
-                aria-label="增加第 ${i + 1} 位數"
-              >▲</button>
-              <span id="digit${i}">0</span>
-              <button
-                type="button"
-                data-i="${i}"
-                data-dir="-1"
-                aria-label="減少第 ${i + 1} 位數"
-              >▼</button>
-            </div>
-          `).join("")}
+      <div class="lab-bench">
+        <!-- 左上：任務 -->
+        <div class="bench-card task-card">
+          <span class="kicker">任務</span>
+          <strong>${target} μL → Tube B</strong>
+          <small>建議量程：${correct}</small>
         </div>
-      </div>
-      <div class="tip-box">
-        <strong>Tip 盒</strong>
-        <div class="tip-grid">
-          ${Array.from({length: 24}, () => `
+        <!-- 右上：操作狀態 -->
+        <div class="bench-card status-card">
+          <span class="kicker">操作狀態</span>
+          <strong id="pipetteStatus">尚未選擇 pipette</strong>
+        </div>
+        <!-- 上方／中間：四支 pipette -->
+        <div class="pipette-rack">
+          ${[
+            {
+              name: "P10",
+              className: "p10",
+              range: "0.5–10 μL"
+            },
+            {
+              name: "P20",
+              className: "p20",
+              range: "2–20 μL"
+            },
+            {
+              name: "P200",
+              className: "p200",
+              range: "20–200 μL"
+            },
+            {
+              name: "P1000",
+              className: "p1000",
+              range: "100–1000 μL"
+            }
+          ].map(item => `
             <button
               type="button"
-              class="tip-dot"
-              aria-label="安裝新 tip"
-            ></button>
+              class="pipette ${item.className}"
+              data-p="${item.name}"
+              aria-label="選擇 ${item.name}"
+            >
+              <label>${item.name}</label>
+              <span class="range">${item.range}</span>
+            </button>
           `).join("")}
         </div>
       </div>
-      <div class="pipette-action">
-        <div class="tip-visual">
-          <div id="tipFill"></div>
+      <!-- 下方控制區 -->
+      <div class="controls">
+        <!-- 數值設定 -->
+        <div class="control-group">
+          <span class="kicker">容量顯示窗</span>
+
+          <div class="digit-controls">
+            ${[0, 1, 2, 3].map(index => `
+              <div class="digit">
+                <button
+                  type="button"
+                  data-i="${index}"
+                  data-dir="1"
+                  aria-label="增加第 ${index + 1} 位數"
+                >
+                  ▲
+                </button>
+                <span id="digit${index}">0</span>
+                <button
+                  type="button"
+                  data-i="${index}"
+                  data-dir="-1"
+                  aria-label="減少第 ${index + 1} 位數"
+                >
+                  ▼
+                </button>
+              </div>
+            `).join("")}
+          </div>
+
+          <small>目前設定：<strong id="volumeValue">0</strong> μL</small>
         </div>
-        <button type="button" id="plungerBtn" class="btn btn-primary">
-          按壓吸液／排液
-        </button>
-        <small>選對 pipette、容量與 tip 後操作</small>
+        <!-- Tip 盒：與數值控制並列 -->
+        <div class="control-group">
+          <span class="kicker">TIP 盒</span>
+          <div class="tip-box">
+            ${Array.from({ length: 24 }, (_, index) => `
+              <button
+                type="button"
+                class="tip-dot"
+                data-tip="${index}"
+                aria-label="安裝第 ${index + 1} 個 tip"
+              ></button>
+            `).join("")}
+          </div>
+          <small id="tipStatus">尚未安裝 tip</small>
+        </div>
+        <!-- 圓形吸液／排液按鈕 -->
+        <div class="control-group pressure-pad">
+          <span class="kicker">PLUNGER</span>
+          <div class="tip-visual">
+            <div id="tipFill" class="tip-fill"></div>
+          </div>
+          <button
+            type="button"
+            id="plungerBtn"
+            class="plunger"
+          >
+            按壓吸液
+          </button>
+          <small>再按一次即可排入 Tube B</small>
+        </div>
       </div>
     `
   );
-
   const status = stage.querySelector("#pipetteStatus");
-  stage.querySelectorAll(".pipette").forEach(btn => {
-    btn.onclick = () => {
+  const tipStatus = stage.querySelector("#tipStatus");
+  const volumeValue = stage.querySelector("#volumeValue");
+  const plungerButton = stage.querySelector("#plungerBtn");
+  const tipFill = stage.querySelector("#tipFill");
+  function currentVolume() {
+    return (
+      digits[0] * 1000 +
+      digits[1] * 100 +
+      digits[2] * 10 +
+      digits[3]
+    );
+  }
+  function updateVolumeDisplay() {
+    volumeValue.textContent = currentVolume();
+  }
+  /*
+   * 選擇 pipette
+   */
+  stage.querySelectorAll(".pipette").forEach(button => {
+    button.addEventListener("click", () => {
       stage.querySelectorAll(".pipette").forEach(item => {
         item.classList.remove("selected");
       });
-      btn.classList.add("selected");
-      selected = btn.dataset.p;
+      button.classList.add("selected");
+      selected = button.dataset.p;
       status.textContent = `已選擇 ${selected}`;
       if (selected !== correct) {
         ctx.penalize(
           "accuracy",
           18,
-          "選擇了不適合的 pipette 量程。"
+          `此容量較適合使用 ${correct}。`
         );
       }
-    };
+    });
   });
-  stage.querySelectorAll(".digit button").forEach(btn => {
-    btn.onclick = () => {
-      const index = Number(btn.dataset.i);
-      const direction = Number(btn.dataset.dir);
-
-      digits[index] = (digits[index] + direction + 10) % 10;
-      stage.querySelector(`#digit${index}`).textContent = digits[index];
-    };
+  /*
+   * 調整四位數容量
+   */
+  stage.querySelectorAll(".digit button").forEach(button => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.i);
+      const direction = Number(button.dataset.dir);
+      digits[index] =
+        (digits[index] + direction + 10) % 10;
+      stage.querySelector(
+        `#digit${index}`
+      ).textContent = digits[index];
+      updateVolumeDisplay();
+    });
   });
-  stage.querySelectorAll(".tip-dot").forEach(btn => {
-    btn.onclick = () => {
-      if (btn.classList.contains("used")) return;
+  /*
+   * 安裝 tip
+   */
+  stage.querySelectorAll(".tip-dot").forEach(button => {
+    button.addEventListener("click", () => {
+      if (button.classList.contains("used")) {
+        return;
+      }
       stage.querySelectorAll(".tip-dot").forEach(item => {
         item.classList.remove("selected");
       });
-      btn.classList.add("used", "selected");
-      tip = true;
+      button.classList.add("used", "selected");
+      tipInstalled = true;
+      tipStatus.textContent = "Tip 安裝完成";
       status.textContent = "Tip 安裝完成";
-    };
+    });
   });
-  stage.querySelector("#plungerBtn").onclick = () => {
-    const numeric =
-      digits[0] * 1000 +
-      digits[1] * 100 +
-      digits[2] * 10 +
-      digits[3];
-    if (!selected || !tip) {
+  /*
+   * 吸液／排液
+   */
+  plungerButton.addEventListener("click", () => {
+    const numeric = currentVolume();
+    if (!selected) {
+      ctx.penalize(
+        "safety",
+        18,
+        "請先選擇 pipette。"
+      );
+      return;
+    }
+    if (!tipInstalled) {
       ctx.penalize(
         "safety",
         22,
-        "尚未正確選擇 pipette 或安裝 tip。"
+        "請先安裝新的 tip。"
       );
       return;
     }
@@ -184,7 +265,7 @@ pipette(ctx){
       ctx.penalize(
         "accuracy",
         22,
-        `此容量應使用 ${correct}。`
+        `本題應使用 ${correct}。`
       );
       return;
     }
@@ -192,21 +273,31 @@ pipette(ctx){
       ctx.penalize(
         "accuracy",
         22,
-        `容量設定錯誤，目前為 ${numeric} μL，任務要求 ${target} μL。`
+        `目前設定為 ${numeric} μL，任務要求 ${target} μL。`
       );
       return;
     }
-    liquid = !liquid;
-    stage.querySelector("#tipFill").style.height =
-      liquid ? "65%" : "0";
-    status.textContent = liquid
-      ? `已吸取 ${target} μL，再按一次排入 Tube B`
-      : "排液完成";
-    if (!liquid) {
-      ctx.complete();
+    liquidLoaded = !liquidLoaded;
+    tipFill.style.height =
+      liquidLoaded ? "65%" : "0";
+    plungerButton.classList.toggle(
+      "active",
+      liquidLoaded
+    );
+    if (liquidLoaded) {
+      status.textContent =
+        `已吸取 ${target} μL，請再按一次排入 Tube B`;
+      plungerButton.textContent = "按壓排液";
+      return;
     }
-  };
+    status.textContent =
+      `${target} μL 已排入 Tube B`;
+    plungerButton.textContent = "排液完成";
+    ctx.complete();
+  });
+  updateVolumeDisplay();
 },
+  
   serological(ctx){
     let volume=0;
     const target=[5,10,15,20,25][(ctx.config.level+ctx.config.roundIndex-7)%5];
