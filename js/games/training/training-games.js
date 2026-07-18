@@ -1523,3 +1523,167 @@ const TrainingGames={
         </p>
       `
     );
+
+    ctx.stage.querySelectorAll(".well").forEach(w=>w.onclick=()=>{
+      if(w.classList.contains("filled"))return;
+      if(targets.includes(+w.dataset.i)){w.classList.add("filled");done++;ctx.stage.querySelector("#wellProgress").textContent=done;if(done===targetCount)ctx.complete()}
+      else{w.classList.add("wrong");ctx.penalize("accuracy",18,"加錯well，組別可能混淆。")}
+    });
+  },
+  microscope(ctx){
+    const issues=[];
+    let coarseMoved=false;
+    let fineMoved=false;
+    let orderError=false;
+    ctx.stage.innerHTML=this.shell(
+      "Microscope 對焦與影像確認",
+      "請先調整粗焦，再調整細焦，最後調整亮度並拍攝影像。",
+      `<div class="microscope-stage"><div class="scope-view"><div id="cellField" class="cell-field"></div></div><div class="scope-controls">
+        <label>亮度<input id="brightness" type="range" min="50" max="150" value="90"></label>
+        <label>粗焦<input id="coarse" type="range" min="0" max="20" value="4"></label>
+        <label>細焦<input id="fine" type="range" min="0" max="20" value="6"></label>
+        <div id="focusOrder" class="notice">請先調整粗焦。</div>
+        <button id="captureBtn" class="btn btn-primary">拍攝影像</button>
+      </div></div>`
+    );
+    const field=ctx.stage.querySelector("#cellField");
+    const brightness=ctx.stage.querySelector("#brightness");
+    const coarse=ctx.stage.querySelector("#coarse");
+    const fine=ctx.stage.querySelector("#fine");
+    const focusOrder=ctx.stage.querySelector("#focusOrder");
+    const update=()=>{
+      const blur=Math.abs(+coarse.value-13)*.7+Math.abs(+fine.value-15)*.22;
+      field.style.filter=`blur(${blur}px) brightness(${brightness.value/100})`;
+    };
+    coarse.oninput=()=>{
+      coarseMoved=true;
+      focusOrder.textContent="粗焦已調整，現在可進行細焦。";
+      update();
+    };
+    fine.oninput=()=>{
+      if(!coarseMoved&&!orderError){
+        orderError=true;
+        ctx.penalize("safety",18,"應先調整粗焦，再調整細焦。");
+        issues.push("Wrong focus order");
+      }
+      fineMoved=true;
+      focusOrder.textContent=coarseMoved?"正在調整細焦。":"Wrong focus order";
+      update();
+    };
+    brightness.oninput=update;
+    update();
+    ctx.stage.querySelector("#captureBtn").onclick=()=>{
+      const blur=Math.abs(+coarse.value-13)*.7+Math.abs(+fine.value-15)*.22;
+      const b=+brightness.value;
+      if(!coarseMoved){
+        ctx.penalize("safety",16,"未調整粗焦。");
+        issues.push("Coarse focus not adjusted");
+      }
+      if(!fineMoved){
+        ctx.penalize("accuracy",16,"未調整細焦。");
+        issues.push("Fine focus not adjusted");
+      }
+      if(blur>1.4){
+        ctx.penalize("accuracy",24,"影像失焦，無法判讀細胞狀態。");
+        issues.push("Image out of focus");
+      }
+      if(b<80||b>115){
+        ctx.penalize("sampleQuality",18,"影像過暗或過曝。");
+        issues.push("Wrong brightness");
+      }
+      this.finishRound(ctx,issues);
+    };
+  },
+
+  labInspection(ctx){
+    const level=Number(ctx.config.level);
+    const scenes={
+      18:{
+        title:"實驗室安全巡查 I",
+        description:"請點選所有不符合實驗室安全或設備使用規範的地方。",
+        errors:{
+          pipette:"Pipette placed horizontally",
+          uv:"UV light left on",
+          incubator:"Incubator door not closed",
+          usedTip:"Used tip left on pipette",
+          unlabeledTube:"Unlabeled tube"
+        }
+      },
+      19:{
+        title:"實驗室安全巡查 II",
+        description:"請找出所有需要立即修正的實驗室錯誤。",
+        errors:{
+          centrifuge:"Centrifuge not balanced",
+          waste:"Biohazard waste is full",
+          hoodClutter:"Hood is cluttered",
+          ethanol:"Ethanol bottle left open",
+          reagent:"Cold reagent left on bench"
+        }
+      }
+    };
+    const scene=scenes[level]||scenes[18];
+    const found=new Set();
+    const required=Object.keys(scene.errors);
+    const object=(id,label,error)=>`
+      <button type="button" class="lab-object" data-error="${error?id:""}">
+        <span>${label}</span>
+      </button>`;
+
+    ctx.stage.innerHTML=this.shell(scene.title,scene.description,`
+      <div class="inspection-scene">
+        <section class="inspection-zone">
+          <strong>Biosafety Cabinet</strong>
+          ${object("uv","UV Lamp",level===18)}
+          ${object("hoodClutter","Supplies",level===19)}
+          ${object("culture","Culture Dish",false)}
+        </section>
+        <section class="inspection-zone">
+          <strong>Laboratory Bench</strong>
+          ${object("pipette","Micropipette",level===18)}
+          ${object("usedTip","Used Tip",level===18)}
+          ${object("unlabeledTube","Sample Tube",level===18)}
+          ${object("ethanol","Ethanol",level===19)}
+          ${object("reagent","Cold Reagent",level===19)}
+          ${object("rack","Tube Rack",false)}
+        </section>
+        <section class="inspection-zone">
+          <strong>Equipment Area</strong>
+          ${object("incubator","Incubator",level===18)}
+          ${object("centrifuge","Centrifuge",level===19)}
+          ${object("waste","Biohazard Waste",level===19)}
+          ${object("freezer","Freezer",false)}
+        </section>
+      </div>
+      <div class="inspection-footer">
+        <strong>Found <span id="inspectionCount">0</span> / ${required.length}</strong>
+        <button type="button" id="finishInspection" class="btn btn-primary btn-large">完成巡查</button>
+      </div>
+    `);
+
+    ctx.stage.querySelectorAll(".lab-object").forEach(button=>{
+      button.onclick=()=>{
+        const id=button.dataset.error;
+        if(!id){
+          if(!button.classList.contains("wrong-selected")){
+            button.classList.add("wrong-selected");
+            ctx.penalize("accuracy",6,"此設備沒有明顯錯誤。");
+          }
+          return;
+        }
+        if(found.has(id))return;
+        found.add(id);
+        button.classList.add("found");
+        ctx.stage.querySelector("#inspectionCount").textContent=found.size;
+      };
+    });
+
+    ctx.stage.querySelector("#finishInspection").onclick=()=>{
+      const missing=required.filter(id=>!found.has(id));
+      if(missing.length){
+        ctx.penalize("safety",Math.min(40,missing.length*8),"仍有實驗室錯誤未被發現。");
+      }
+      this.finishRound(ctx,missing.map(id=>scene.errors[id]));
+    };
+  }
+
+};
