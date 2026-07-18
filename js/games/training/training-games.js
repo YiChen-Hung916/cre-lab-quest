@@ -137,7 +137,7 @@ pipette(ctx) {
             `).join("")}
           </div>
 
-          <!-- <small>目前設定：<strong id="volumeValue">0</strong> μL</small> -->
+          <small>目前設定：<strong id="volumeValue">0</strong> μL</small>
         </div>
         <!-- Tip 盒：與數值控制並列 -->
         <div class="control-group">
