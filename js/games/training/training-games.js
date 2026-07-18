@@ -915,19 +915,6 @@ const tubeHtml = tubes.map(tube => `
   </button>
 `).join("");
 
-const tubeHtml = tubes.map(tube => `
-  <button
-    type="button"
-    class="tube-token"
-    data-tube="${tube.id}"
-    data-pair="${tube.pair}"
-    data-volume="${tube.volume}"
-  >
-    <strong>Tube ${tube.id}</strong>
-    <span>${tube.volume} μL</span>
-  </button>
-`).join("");
-
 
     ctx.stage.innerHTML=this.shell(
       "Centrifuge 配平",
