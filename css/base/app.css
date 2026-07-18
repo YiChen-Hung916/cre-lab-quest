@@ -11,19 +11,19 @@ main{max-width:1080px;margin:auto;padding:clamp(12px,3vw,24px)}.view{display:non
 .lab-bench{position:relative;min-height:360px;border-radius:22px;background:linear-gradient(#e6f2f5 0 64%,#c59667 64% 70%,#8b5d39 70%);overflow:hidden;border:1px solid #d4e3e9}.bench-card{position:absolute;background:white;border:1px solid #d7e4ea;border-radius:16px;padding:12px;box-shadow:0 10px 24px rgba(22,50,74,.12)}.task-card{left:14px;top:14px;max-width:250px}.status-card{right:14px;top:14px;min-width:180px}.pipette-rack{position:absolute;left:50%;bottom:68px;transform:translateX(-50%);display:flex;gap:16px}.pipette{width:54px;height:180px;border-radius:18px 18px 8px 8px;background:linear-gradient(90deg,#dbe8ec,#fff,#c9d9df);border:2px solid #8ca3ae;position:relative;cursor:pointer;transition:.2s}.pipette:hover,.pipette.selected{transform:translateY(-8px)}.pipette::before{content:"";position:absolute;left:17px;top:-18px;width:17px;height:27px;border-radius:8px;background:#475d69}.pipette::after{content:"";position:absolute;left:22px;bottom:-65px;width:8px;height:68px;background:#d8eef2;border:1px solid #89a8b0;clip-path:polygon(25% 0,75% 0,100% 100%,0 100%)}.pipette label{position:absolute;top:60px;left:50%;transform:translateX(-50%) rotate(-90deg);font-weight:900;font-size:.72rem}.pipette .range{position:absolute;bottom:12px;width:100%;text-align:center;font-size:.62rem;color:#58717f}.pipette.p10{border-top:12px solid #f2d74f}.pipette.p20{border-top:12px solid #e8864c}.pipette.p200{border-top:12px solid #f0c441}.pipette.p1000{border-top:12px solid #4d88bd}
 .controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:16px}.control-group{background:#f2f7f9;border-radius:16px;padding:12px}.digit-controls{display:flex;gap:8px;justify-content:center}.digit{display:flex;flex-direction:column;gap:3px}.digit button{border:0;border-radius:8px;background:#dfecef;padding:5px}.digit span{display:grid;place-items:center;width:44px;height:48px;border-radius:9px;background:#17324a;color:white;font:900 1.5rem monospace}
 .tip-box{display:grid;grid-template-columns:repeat(8,18px);gap:5px;padding:12px;background:#dcecf2;border:2px solid #9db5bf;border-radius:14px}.tip-dot{height:18px;border-radius:50%;background:#f5fbfd;border:1px solid #99b1bc;cursor:pointer}.tip-dot.used{opacity:.25}.liquid-scene{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:end;max-width:560px;margin:20px auto}.tube{height:190px;border:4px solid #a7bbc4;border-top-width:7px;border-radius:12px 12px 34px 34px;position:relative;overflow:hidden;background:rgba(255,255,255,.75)}.liquid{position:absolute;left:0;right:0;bottom:0;height:52%;background:linear-gradient(#f7b9c1,#d78098);transition:.2s}.tip-visual{height:170px;width:32px;margin:auto;background:linear-gradient(90deg,#eaf6f8,#fff,#d5e7ea);clip-path:polygon(20% 0,80% 0,60% 100%,40% 100%);position:relative}.tip-fill{position:absolute;left:10px;right:10px;bottom:10px;height:0;background:#d78098;transition:.25s}.pressure-pad{display:flex;flex-direction:column;align-items:center;gap:8px}.plunger{width:100px;height:100px;border-radius:50%;border:0;background:radial-gradient(circle,#f7fbfc,#b9cbd3);box-shadow:inset 0 -8px 0 rgba(31,68,88,.12);font-weight:900}.plunger.active{transform:translateY(6px)}
+/* =========================================================
+   Centrifuge
+========================================================= */
 .centrifuge-wrap{
   display:grid;
-  grid-template-columns:1fr .9fr;
+  grid-template-columns:minmax(0,1fr) minmax(260px,.9fr);
   gap:18px;
   align-items:center;
 }
-
+/* 離心機圓盤 */
 .rotor{
-  --rotor-size:min(360px,80vw);
-  --hole-distance:calc(var(--rotor-size) * .38);
-
   position:relative;
-  width:var(--rotor-size);
+  width:min(360px,80vw);
   aspect-ratio:1;
   margin:auto;
   border-radius:50%;
@@ -38,15 +38,12 @@ main{max-width:1080px;margin:auto;padding:clamp(12px,3vw,24px)}.view{display:non
     inset 0 0 0 12px #d6e1e6,
     0 16px 28px rgba(20,48,65,.18);
 }
-
 /*
-JavaScript 必須替每個孔位提供：
-style="--hole-angle: 0deg"
-*/
+ * 孔位的 left、top、transform
+ * 由 training-games.js 直接寫入。
+ */
 .rotor-hole{
   position:absolute;
-  top:50%;
-  left:50%;
   width:42px;
   height:58px;
   padding:0;
@@ -58,27 +55,16 @@ style="--hole-angle: 0deg"
   place-items:center;
   text-align:center;
   cursor:pointer;
-  transform:
-    translate(-50%,-50%)
-    rotate(var(--hole-angle))
-    translateY(calc(var(--hole-distance) * -1))
-    rotate(calc(var(--hole-angle) * -1));
   font-size:.68rem;
   line-height:1;
+  box-shadow:
+    inset 0 -4px 0 rgba(0,0,0,.18);
+  transition:
+    background .18s,
+    transform .18s;
 }
-.rotor-hole strong{
-  position:relative;
-  z-index:2;
-  display:grid;
-  place-items:center;
-  width:100%;
-  height:100%;
-  font-size:.9rem;
-  line-height:1;
-}
-.rotor-hole small{
-  font-size:.62rem;
-  line-height:1;
+.rotor-hole:hover:not(.filled){
+  background:#1b4053;
 }
 .rotor-hole.filled{
   background:#d67f8a;
@@ -86,67 +72,121 @@ style="--hole-angle: 0deg"
 .rotor-hole.balance{
   background:#6cb7ad;
 }
-/* JavaScript 的 rotor 元素若有 rotor-16 或 rotor-24 class */
-.rotor.rotor-16 .rotor-hole{
-  width:34px;
-  height:46px;
+/* 孔位中原本的 rotor 位置編號 */
+.rotor-hole span{
+  display:grid;
+  place-items:center;
+  width:100%;
+  height:100%;
+  line-height:1;
+  pointer-events:none;
+}
+/* Tube 放入後顯示的編號 */
+.rotor-hole strong{
+  display:grid;
+  place-items:center;
+  width:100%;
+  height:100%;
+  position:relative;
+  z-index:2;
+
+  font-size:.9rem;
+  line-height:1;
+  pointer-events:none;
+}
+/* 12 孔 */
+.rotor.rotor-12 .rotor-hole{
+  width:37px;
+  height:51px;
   border-width:3px;
 }
-.rotor.rotor-24{
-  --hole-distance:calc(var(--rotor-size) * .42);
+/* 16 孔 */
+.rotor.rotor-16 .rotor-hole{
+  width:32px;
+  height:44px;
+  border-width:3px;
+  border-radius:12px;
 }
+.rotor.rotor-16 .rotor-hole strong{
+  font-size:.76rem;
+}
+.rotor.rotor-16 .rotor-hole span{
+  font-size:.58rem;
+}
+/* 24 孔 */
 .rotor.rotor-24 .rotor-hole{
-  width:28px;
-  height:38px;
+  width:25px;
+  height:35px;
   border-width:2px;
-  border-radius:10px;
+  border-radius:9px;
 }
 .rotor.rotor-24 .rotor-hole strong{
-  font-size:.7rem;
+  font-size:.58rem;
 }
-.rotor.rotor-24 .rotor-hole small{
-  font-size:.5rem;
+.rotor.rotor-24 .rotor-hole span{
+  font-size:.46rem;
 }
+/* Tube 選擇區 */
 .tube-bank{
   display:grid;
-  grid-template-columns:repeat(2,1fr);
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px;
 }
-
 .tube-token{
-  padding:14px;
+  min-width:0;
+  padding:14px 8px;
   border:1px solid #cddde4;
   border-radius:14px;
   background:#f5fafb;
-  cursor:grab;
+  color:var(--ink);
+  cursor:pointer;
   font-weight:800;
   text-align:center;
+  transition:
+    transform .16s,
+    border-color .16s,
+    opacity .16s;
+}
+.tube-token:hover:not(:disabled){
+  transform:translateY(-2px);
+  border-color:#78aab8;
+}
+.tube-token.selected{
+  outline:3px solid rgba(74,137,184,.24);
+  border-color:var(--blue);
+}
+.tube-token:disabled{
+  opacity:.38;
+  cursor:not-allowed;
 }
 .tube-token strong,
 .tube-token span{
   display:block;
 }
 .tube-token strong{
-  font-size:1rem;
+  font-size:.9rem;
 }
 .tube-token span{
   margin-top:3px;
   font-size:.72rem;
   color:var(--muted);
 }
-.tube-token.selected{
-  outline:3px solid rgba(74,137,184,.24);
-}
+/* 離心條件 */
 .parameter-grid{
   display:grid;
-  grid-template-columns:repeat(2,1fr);
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px;
 }
 .parameter-grid label{
   display:block;
-  padding:10px;
+  min-width:0;
+  padding:12px;
   border-radius:12px;
   background:#f1f6f8;
+}
+.parameter-grid label > strong{
+  display:block;
+  margin:5px 0;
 }
 .parameter-grid input{
   width:100%;
