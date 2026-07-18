@@ -117,6 +117,17 @@ async function bootstrap(){
 }
 $("#continueBtn").onclick=()=>startLevel(state.currentLevel);
 $("#mapBtn").onclick=()=>{renderMetrics();renderMap();showView("#homeView")};
+$("#resultMapBtn").onclick = () => {
+  $("#modal").classList.add("hidden");
+  active = null;
+  renderMetrics();
+  renderMap();
+  showView("#homeView");
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+};
 $("#retryBtn").onclick=()=>{$("#modal").classList.add("hidden");startLevel(active.level)};
 $("#nextBtn").onclick=()=>{$("#modal").classList.add("hidden");if(active.level<140)startLevel(active.level+1);else{renderMap();renderMetrics();showView("#homeView");openDrawer(`<span class="kicker">TO BE CONTINUED</span><h2>COMING SOON</h2><p>你已完成目前所有研究任務。新的關卡將於後續版本加入。</p>`)}};
 $("#jumpCurrentBtn").onclick=()=>document.querySelector(`[data-level="${state.currentLevel}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
