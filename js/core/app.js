@@ -100,7 +100,6 @@ function updateAccountButton(){
       : AuthService.user
         ? "已登入"
         : "遊客模式";
-
   // 只有管理員已啟用開發者模式時，才顯示 Spark 用量
   $("#usageBtn").classList.toggle(
     "hidden",
@@ -118,12 +117,6 @@ async function bootstrap(){
 }
 $("#continueBtn").onclick=()=>startLevel(state.currentLevel);
 $("#mapBtn").onclick=()=>{renderMetrics();renderMap();showView("#homeView")};
-$("#resultMapBtn").onclick=()=>{
-  $("#modal").classList.add("hidden");
-  renderMetrics();
-  renderMap();
-  showView("#homeView");
-};
 $("#retryBtn").onclick=()=>{$("#modal").classList.add("hidden");startLevel(active.level)};
 $("#nextBtn").onclick=()=>{$("#modal").classList.add("hidden");if(active.level<140)startLevel(active.level+1);else{renderMap();renderMetrics();showView("#homeView");openDrawer(`<span class="kicker">TO BE CONTINUED</span><h2>COMING SOON</h2><p>你已完成目前所有研究任務。新的關卡將於後續版本加入。</p>`)}};
 $("#jumpCurrentBtn").onclick=()=>document.querySelector(`[data-level="${state.currentLevel}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
@@ -135,4 +128,14 @@ $("#howBtn").onclick=()=>openDrawer(`<span class="kicker">HOW TO PLAY</span><h2>
 $("#loginBtn").onclick=()=>{openDrawer(accountPanel());bindAccountActions()};
 $("#closeDrawerBtn").onclick=()=>$("#drawer").classList.add("hidden");
 $("#drawer").onclick=e=>{if(e.target.id==="drawer")$("#drawer").classList.add("hidden")};
+document.addEventListener("click", event => {
+  const resultMapButton = event.target.closest("#resultMapBtn");
+  if (!resultMapButton) return;
+  event.preventDefault();
+  event.stopPropagation();
+  $("#modal").classList.add("hidden");
+  renderMetrics();
+  renderMap();
+  showView("#homeView");
+});
 bootstrap();
