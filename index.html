@@ -2,27 +2,20 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
-
   <meta name="theme-color" content="#15324a">
-
   <meta
     name="description"
     content="CRE Lab Quest — 攝護腺癌研究互動闖關遊戲"
   >
-
   <title>CRE Lab Quest</title>
-
   <link rel="stylesheet" href="./css/base/app.css">
 </head>
-
 <body>
   <div id="app">
-
     <!-- 頂部導覽列 -->
     <header class="topbar">
       <a
@@ -32,13 +25,11 @@
         aria-label="CRE Lab Quest 首頁"
       >
         <span class="brand-mark">CRE</span>
-
         <span>
           <strong>Lab Quest</strong>
           <small>Prostate Cancer Research Game</small>
         </span>
       </a>
-
       <div class="top-actions">
         <!--
           預設隱藏。
@@ -51,7 +42,6 @@
         >
           Spark 用量
         </button>
-
         <button
           type="button"
           id="loginBtn"
@@ -61,26 +51,21 @@
         </button>
       </div>
     </header>
-
+  
     <main>
-
       <!-- 首頁／關卡地圖 -->
       <section id="homeView" class="view active">
-
         <div class="hero">
           <div class="hero-copy">
             <span class="kicker">
               MOBILE FIRST · RESEARCH ADVENTURE
             </span>
-
             <h1>
               從實驗室新手，成為攝護腺癌研究專家
             </h1>
-
             <p>
               前 20 關先完成儀器訓練；之後進入 14 種互動模式與隨機 Boss 綜合任務。
             </p>
-
             <div class="hero-actions">
               <button
                 type="button"
@@ -89,7 +74,6 @@
               >
                 繼續遊戲
               </button>
-
               <button
                 type="button"
                 id="howBtn"
@@ -99,19 +83,16 @@
               </button>
             </div>
           </div>
-
           <div class="hero-visual" aria-hidden="true">
             <div class="cell cell-a"></div>
             <div class="cell cell-b"></div>
             <div class="cell cell-c"></div>
-
             <div class="dna">
               AT<br>
               CG<br>
               TA<br>
               GC
             </div>
-
             <div class="microscope">🔬</div>
           </div>
         </div>
@@ -122,23 +103,20 @@
             <span>目前關卡</span>
             <strong id="currentLevelMetric">1</strong>
           </article>
-
           <article class="metric">
             <span>已完成關卡</span>
             <strong id="unlockMetric">0</strong>
           </article>
-
           <article class="metric">
             <span>Research XP</span>
             <strong id="xpMetric">0</strong>
           </article>
-
           <article class="metric">
             <span>Research Rank</span>
             <strong id="rankMetric">Lab Visitor</strong>
           </article>
         </section>
-
+        
         <!-- 關卡地圖 -->
         <section class="panel map-panel">
           <div class="panel-heading">
@@ -146,7 +124,6 @@
               <span class="kicker">LEVEL MAP</span>
               <h2>關卡地圖</h2>
             </div>
-
             <button
               type="button"
               id="jumpCurrentBtn"
@@ -155,7 +132,6 @@
               移至目前關卡
             </button>
           </div>
-
           <div id="levelMap" class="level-map"></div>
         </section>
       </section>
@@ -170,29 +146,23 @@
           >
             ← 返回地圖
           </button>
-
           <div class="game-title">
             <span id="gameModeName" class="kicker"></span>
             <h2 id="gameLevelTitle">Level</h2>
           </div>
-
           <div id="bossTag" class="boss-tag hidden">
             BOSS
           </div>
         </div>
-
         <section class="evaluation-note">
           <span>本關評分項目</span>
-
           <strong>
             Accuracy · Sample Quality · Safety
           </strong>
-
           <small>
             分數將於任務結束後公布
           </small>
         </section>
-
         <section
           id="gameStage"
           class="game-stage"
@@ -216,16 +186,12 @@
         >
           🧪
         </div>
-
         <h2 id="modalTitle"></h2>
-
         <p id="modalMessage"></p>
-
         <div
           id="modalScores"
           class="modal-scores"
         ></div>
-
         <div class="modal-actions">
           <button
             type="button"
@@ -234,7 +200,6 @@
           >
             回到地圖
           </button>
-
           <button
             type="button"
             id="retryBtn"
@@ -242,7 +207,6 @@
           >
             重新挑戰
           </button>
-
           <button
             type="button"
             id="nextBtn"
@@ -269,7 +233,6 @@
         >
           ×
         </button>
-
         <div id="drawerContent"></div>
       </div>
     </div>
