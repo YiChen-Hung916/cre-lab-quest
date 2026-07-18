@@ -2,113 +2,301 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
   <meta name="theme-color" content="#15324a">
-  <meta name="description" content="CRE Lab Quest — 攝護腺癌研究互動闖關遊戲">
+
+  <meta
+    name="description"
+    content="CRE Lab Quest — 攝護腺癌研究互動闖關遊戲"
+  >
+
   <title>CRE Lab Quest</title>
+
   <link rel="stylesheet" href="./css/base/app.css">
 </head>
+
 <body>
   <div id="app">
+
+    <!-- 頂部導覽列 -->
     <header class="topbar">
-      <a class="brand" href="#home" aria-label="CRE Lab Quest 首頁">
+      <a
+        id="brandHomeLink"
+        class="brand"
+        href="#home"
+        aria-label="CRE Lab Quest 首頁"
+      >
         <span class="brand-mark">CRE</span>
-        <span><strong>Lab Quest</strong><small>Prostate Cancer Research Game</small></span>
+
+        <span>
+          <strong>Lab Quest</strong>
+          <small>Prostate Cancer Research Game</small>
+        </span>
       </a>
+
       <div class="top-actions">
-        <button id="usageBtn" class="btn btn-soft hidden">Spark 用量</button>
-        <button id="loginBtn" class="btn btn-soft">遊客模式</button>
+        <!--
+          預設隱藏。
+          只有管理員開啟 Developer Mode 後，app.js 才會顯示。
+        -->
+        <button
+          type="button"
+          id="usageBtn"
+          class="btn btn-soft hidden"
+        >
+          Spark 用量
+        </button>
+
+        <button
+          type="button"
+          id="loginBtn"
+          class="btn btn-soft"
+        >
+          遊客模式
+        </button>
       </div>
     </header>
 
     <main>
+
+      <!-- 首頁／關卡地圖 -->
       <section id="homeView" class="view active">
+
         <div class="hero">
           <div class="hero-copy">
-            <span class="kicker">MOBILE FIRST · RESEARCH ADVENTURE</span>
-            <h1>從實驗室新手，成為攝護腺癌研究專家</h1>
-            <p>前20關先完成儀器訓練；之後進入14種互動模式與隨機Boss綜合任務。</p>
+            <span class="kicker">
+              MOBILE FIRST · RESEARCH ADVENTURE
+            </span>
+
+            <h1>
+              從實驗室新手，成為攝護腺癌研究專家
+            </h1>
+
+            <p>
+              前 20 關先完成儀器訓練；之後進入 14 種互動模式與隨機 Boss 綜合任務。
+            </p>
+
             <div class="hero-actions">
-              <button id="continueBtn" class="btn btn-primary btn-large">繼續遊戲</button>
-              <button id="howBtn" class="btn btn-white btn-large">玩法說明</button>
+              <button
+                type="button"
+                id="continueBtn"
+                class="btn btn-primary btn-large"
+              >
+                繼續遊戲
+              </button>
+
+              <button
+                type="button"
+                id="howBtn"
+                class="btn btn-white btn-large"
+              >
+                玩法說明
+              </button>
             </div>
           </div>
+
           <div class="hero-visual" aria-hidden="true">
-            <div class="cell cell-a"></div><div class="cell cell-b"></div><div class="cell cell-c"></div>
-            <div class="dna">AT<br>CG<br>TA<br>GC</div>
+            <div class="cell cell-a"></div>
+            <div class="cell cell-b"></div>
+            <div class="cell cell-c"></div>
+
+            <div class="dna">
+              AT<br>
+              CG<br>
+              TA<br>
+              GC
+            </div>
+
             <div class="microscope">🔬</div>
           </div>
         </div>
 
+        <!-- 玩家資訊 -->
         <section class="dashboard-grid">
-          <article class="metric"><span>目前關卡</span><strong id="currentLevelMetric">1</strong></article>
-          <article class="metric"><span>已完成關卡</span><strong id="unlockMetric">0</strong></article>
-          <article class="metric"><span>Research XP</span><strong id="xpMetric">0</strong></article>
-          <article class="metric"><span>Research Rank</span><strong id="rankMetric">Lab Visitor</strong></article>
+          <article class="metric">
+            <span>目前關卡</span>
+            <strong id="currentLevelMetric">1</strong>
+          </article>
+
+          <article class="metric">
+            <span>已完成關卡</span>
+            <strong id="unlockMetric">0</strong>
+          </article>
+
+          <article class="metric">
+            <span>Research XP</span>
+            <strong id="xpMetric">0</strong>
+          </article>
+
+          <article class="metric">
+            <span>Research Rank</span>
+            <strong id="rankMetric">Lab Visitor</strong>
+          </article>
         </section>
 
+        <!-- 關卡地圖 -->
         <section class="panel map-panel">
           <div class="panel-heading">
-            <div><span class="kicker">LEVEL MAP</span><h2>關卡地圖</h2></div>
-            <button id="jumpCurrentBtn" class="btn btn-soft">移至目前關卡</button>
+            <div>
+              <span class="kicker">LEVEL MAP</span>
+              <h2>關卡地圖</h2>
+            </div>
+
+            <button
+              type="button"
+              id="jumpCurrentBtn"
+              class="btn btn-soft"
+            >
+              移至目前關卡
+            </button>
           </div>
+
           <div id="levelMap" class="level-map"></div>
         </section>
       </section>
 
+      <!-- 遊戲畫面 -->
       <section id="gameView" class="view">
         <div class="game-top">
-          <button id="mapBtn" class="btn btn-soft">← 返回地圖</button>
+          <button
+            type="button"
+            id="mapBtn"
+            class="btn btn-soft"
+          >
+            ← 返回地圖
+          </button>
+
           <div class="game-title">
             <span id="gameModeName" class="kicker"></span>
             <h2 id="gameLevelTitle">Level</h2>
           </div>
-          <div id="bossTag" class="boss-tag hidden">BOSS</div>
+
+          <div id="bossTag" class="boss-tag hidden">
+            BOSS
+          </div>
         </div>
 
         <section class="evaluation-note">
           <span>本關評分項目</span>
-          <strong>Accuracy · Sample Quality · Safety</strong>
-          <small>分數將於任務結束後公布</small>
+
+          <strong>
+            Accuracy · Sample Quality · Safety
+          </strong>
+
+          <small>
+            分數將於任務結束後公布
+          </small>
         </section>
 
-        <section id="gameStage" class="game-stage"></section>
+        <section
+          id="gameStage"
+          class="game-stage"
+        ></section>
       </section>
     </main>
 
-    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <!-- 關卡結算視窗 -->
+    <div
+      id="modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
       <div class="modal-card">
-        <div id="modalIcon" class="modal-icon">🧪</div>
+        <div
+          id="modalIcon"
+          class="modal-icon"
+          aria-hidden="true"
+        >
+          🧪
+        </div>
+
         <h2 id="modalTitle"></h2>
+
         <p id="modalMessage"></p>
-        <div id="modalScores" class="modal-scores"></div>
+
+        <div
+          id="modalScores"
+          class="modal-scores"
+        ></div>
+
         <div class="modal-actions">
-          <button type="button" id="resultMapBtn" class="btn btn-white">回到地圖</button>
-          <button type="button" id="retryBtn" class="btn btn-soft">重新挑戰</button>
-          <button type="button" id="nextBtn" class="btn btn-primary">下一關</button>
+          <button
+            type="button"
+            id="resultMapBtn"
+            class="btn btn-white"
+          >
+            回到地圖
+          </button>
+
+          <button
+            type="button"
+            id="retryBtn"
+            class="btn btn-soft"
+          >
+            重新挑戰
+          </button>
+
+          <button
+            type="button"
+            id="nextBtn"
+            class="btn btn-primary"
+          >
+            下一關
+          </button>
         </div>
       </div>
     </div>
 
-    <div id="drawer" class="drawer hidden">
+    <!-- 帳號／用量側邊視窗 -->
+    <div
+      id="drawer"
+      class="drawer hidden"
+      aria-hidden="true"
+    >
       <div class="drawer-card">
-        <button id="closeDrawerBtn" class="drawer-close">×</button>
+        <button
+          type="button"
+          id="closeDrawerBtn"
+          class="drawer-close"
+          aria-label="關閉"
+        >
+          ×
+        </button>
+
         <div id="drawerContent"></div>
       </div>
     </div>
   </div>
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+  <!-- Firebase 設定與服務 -->
   <script src="./firebase/firebase-config.js"></script>
   <script src="./firebase/auth-service.js"></script>
+
+  <!-- 關卡資料 -->
   <script src="./data/levels/levels.js"></script>
+
+  <!-- 儲存與用量 -->
   <script src="./js/services/storage.js"></script>
   <script src="./js/services/usage-monitor.js"></script>
+
+  <!-- 遊戲模式 -->
   <script src="./js/games/training/training-games.js"></script>
   <script src="./js/games/modes/future-modes.js"></script>
   <script src="./js/games/boss/boss-engine.js"></script>
+
+  <!-- 主程式一定要放最後 -->
   <script src="./js/core/app.js"></script>
 </body>
 </html>
