@@ -140,9 +140,12 @@ function renderMap() {
         tag.textContent = `${config.rounds}R`;
         button.appendChild(tag);
       }
-      button.addEventListener("click", () => {
-        startLevel(config.level);
-      });
+button.addEventListener("click", event => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  startLevel(config.level);
+});
       map.appendChild(button);
     });
   if (
