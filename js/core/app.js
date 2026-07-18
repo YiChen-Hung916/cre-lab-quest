@@ -242,6 +242,8 @@ function failureText() {
 
     microscope:
       "影像失焦或過曝，未能辨識異常細胞。",
+    labInspection:
+      "實驗室安全巡查未完成，仍有風險項目未被正確辨識。",
     boss:
       "綜合實驗失敗，Boss 必須從第一回合重新開始。"
   };
