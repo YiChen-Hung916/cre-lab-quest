@@ -324,6 +324,7 @@ function finish(pass) {
   const modalTitle = $("#modalTitle");
   const modalMessage = $("#modalMessage");
   const modalScores = $("#modalScores");
+  const retryButton = $("#retryBtn");
   const nextButton = $("#nextBtn");
   const modal = $("#modal");
   const finalAverage = averageScore();
@@ -525,7 +526,7 @@ function startLevel(level) {
   );
 }
   /* BossEngine.mount(context);*/
-}
+
 
 /* =========================================================
    Drawer
