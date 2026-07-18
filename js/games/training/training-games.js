@@ -305,237 +305,362 @@ pipette(ctx) {
     const btn=ctx.stage.querySelector("#aspirateBtn");["mousedown","touchstart"].forEach(e=>btn.addEventListener(e,start));["mouseup","mouseleave","touchend"].forEach(e=>btn.addEventListener(e,stop));
     ctx.stage.querySelector("#dispenseBtn").onclick=()=>{if(Math.abs(volume-target)<=1)ctx.complete();else ctx.penalize("accuracy",24,"吸取體積不正確。")};
   },
-  centrifuge(ctx){
+
+  centrifuge(ctx) {
   const randomInt = (min, max) =>
     Math.floor(Math.random() * (max - min + 1)) + min;
-  const level = ctx.config.level;
-  const round = ctx.config.roundIndex || 1;
-
+  const level = Number(ctx.config.level || 9);
+  const round = Number(ctx.config.roundIndex || 1);
   /*
-   * Lv9：8孔
-   * Lv10：12孔
-   * Lv11：16孔
-   * Lv12以上或較後回合：24孔
+   * 難度：
+   * Lv9：8 孔
+   * Lv10：12 孔
+   * Lv11：16 孔
+   * Lv12 以上：24 孔
    */
   let holes = 8;
-  if (level >= 12 || (level >= 11 && round >= 3)) {
+  if (level >= 12) {
     holes = 24;
   } else if (level >= 11) {
     holes = 16;
   } else if (level >= 10) {
     holes = 12;
   }
-  const maximumPairs =
-    holes === 8 ? 3 :
-    holes === 12 ? 4 :
-    holes === 16 ? 6 :
-    8;
-  const difficultyPairs = Math.min(
-    maximumPairs,
-    Math.max(1, Math.floor((level - 8 + round) / 2))
+
+  /*
+   * 每回合增加 tube 對數，但不超過 rotor 容量。
+   */
+  const maxPairs =
+    holes === 8
+      ? 3
+      : holes === 12
+        ? 4
+        : holes === 16
+          ? 6
+          : 8;
+  const pairCount = Math.min(
+    maxPairs,
+    Math.max(1, round + Math.floor((level - 9) / 2))
   );
-  const pairCount = difficultyPairs;
   const tubeCount = pairCount * 2;
-  // 可出現的離心條件
-  const gOptions = [1000, 1500, 2000, 2500, 3000];
-  const timeOptions = [3, 5, 7, 10];
-  const targetG =
-    gOptions[randomInt(0, gOptions.length - 1)];
+  const speedOptions = [
+    1000,
+    1500,
+    2000,
+    2500,
+    3000
+  ];
+  const timeOptions = [
+    3,
+    5,
+    7,
+    10
+  ];
+  const targetSpeed =
+    speedOptions[randomInt(0, speedOptions.length - 1)];
   const targetTime =
     timeOptions[randomInt(0, timeOptions.length - 1)];
   /*
-   * 每一對 tube 使用相同容量，但不同對之間可以不同。
-   * 玩家必須把同容量的 tube 放到正對面。
+   * 同一對 tube 容量相同；
+   * 不同對可以有不同容量。
    */
   const tubes = [];
   for (let pair = 0; pair < pairCount; pair++) {
     const volume = randomInt(1, 20) * 50;
     tubes.push({
       id: pair * 2 + 1,
-      volume,
-      pair
+      pair,
+      volume
     });
     tubes.push({
       id: pair * 2 + 2,
-      volume,
-      pair
+      pair,
+      volume
     });
   }
-
-  // 洗牌，避免成對 tube 永遠排在一起
-  for (let i = tubes.length - 1; i > 0; i--) {
-    const j = randomInt(0, i);
-    [tubes[i], tubes[j]] = [tubes[j], tubes[i]];
+  /*
+   * 將 tube 順序打亂。
+   */
+  for (let index = tubes.length - 1; index > 0; index--) {
+    const randomIndex = randomInt(0, index);
+    [
+      tubes[index],
+      tubes[randomIndex]
+    ] = [
+      tubes[randomIndex],
+      tubes[index]
+    ];
   }
   let selectedTube = null;
   const placements = {};
+  /*
+   * 直接計算孔位位置，
+   * 不依賴額外的 CSS angle variable。
+   */
+  const rotorHolesHtml = Array
+    .from({ length: holes }, (_, index) => {
+      const angle =
+        (Math.PI * 2 * index) / holes -
+        Math.PI / 2;
+      const radius =
+        holes >= 24
+          ? 43
+          : holes >= 16
+            ? 41
+            : 39;
+      const left =
+        50 + Math.cos(angle) * radius;
+      const top =
+        50 + Math.sin(angle) * radius;
+      return `
+        <button
+          type="button"
+          class="rotor-hole"
+          data-hole="${index}"
+          style="
+            left:${left}%;
+            top:${top}%;
+            transform:
+              translate(-50%, -50%)
+              rotate(${(360 / holes) * index + 90}deg);
+          "
+          aria-label="Rotor position ${index + 1}"
+        >
+          <span
+            style="
+              transform:
+                rotate(-${(360 / holes) * index + 90}deg);
+            "
+          >
+            ${index + 1}
+          </span>
+        </button>
+      `;
+    })
+    .join("");
+  const tubeHtml = tubes
+    .map(tube => `
+      <button
+        type="button"
+        class="tube-token"
+        data-tube="${tube.id}"
+        data-pair="${tube.pair}"
+        data-volume="${tube.volume}"
+      >
+        <strong>Tube ${tube.id}</strong>
+        <span>${tube.volume} μL</span>
+      </button>
+    `)
+    .join("");
   ctx.stage.innerHTML = this.shell(
     "Centrifuge 配平",
-    `將 ${tubeCount} 支不同容量的 tube 正確配平，並設定指定離心條件。`,
+    `將 ${tubeCount} 支 tube 正確配平，並設定本回合的離心條件。`,
     `
-      <div class="centrifuge-instructions">
-        <strong>任務條件</strong>
-        <span>${targetG} ×g</span>
-        <span>${targetTime} min</span>
-        <small>
-          正對面的 tube 必須具有相同體積。
-        </small>
-      </div>
-      <div
-        class="centrifuge-rotor rotor-${holes}"
-        style="--rotor-holes:${holes}"
-      >
-        ${Array.from({length: holes}, (_, index) => {
-          const angle = (360 / holes) * index;
+      <div class="centrifuge-wrap">
 
-          return `
-            <button
-              type="button"
-              class="rotor-hole"
-              data-hole="${index}"
-              style="--hole-angle:${angle}deg"
-              aria-label="Rotor position ${index + 1}"
-            >
-              <small>${index + 1}</small>
-            </button>
-          `;
-        }).join("")}
-      </div>
-      <div class="tube-tray">
-        ${tubes.map(tube => `
-          <button
-            type="button"
-            class="tube-token"
-            data-tube="${tube.id}"
-            data-volume="${tube.volume}"
-            data-pair="${tube.pair}"
+        <div>
+          <div
+            class="rotor rotor-${holes}"
+            aria-label="${holes} 孔 rotor"
           >
-            <strong>${tube.id}</strong>
-            <span>${tube.volume} μL</span>
-          </button>
-        `).join("")}
+            ${rotorHolesHtml}
+          </div>
+        </div>
+        <div>
+          <div class="bench-card" style="position:static;margin-bottom:12px;">
+            <span class="kicker">任務條件</span>
+            <p>
+              <strong>${targetSpeed} ×g</strong>
+              ／
+              <strong>${targetTime} min</strong>
+            </p>
+            <small>
+              正對面的 tube 必須具有相同容量。
+            </small>
+          </div>
+          <div class="tube-bank">
+            ${tubeHtml}
+          </div>
+        </div>
       </div>
-      <div class="centrifuge-controls">
+      <div class="parameter-grid" style="margin-top:18px;">
         <label>
-          離心力：
-          <strong><span id="gText">${targetG}</span> ×g</strong>
-
+          離心力
+          <strong>
+            <span id="gText">500</span> ×g
+          </strong>
           <input
             id="gForce"
             type="range"
             min="500"
             max="3000"
             step="500"
-            value="${targetG}"
+            value="500"
           >
         </label>
         <label>
-          時間：
-          <strong><span id="timeText">${targetTime} min</span></strong>
+          時間
+          <strong id="timeText">
+            1 min
+          </strong>
           <input
             id="spinTime"
             type="range"
             min="1"
             max="10"
             step="1"
-            value="${targetTime}"
+            value="1"
           >
         </label>
       </div>
-      <button type="button" id="spinBtn" class="btn btn-primary">
-        啟動離心機
-      </button>
+      <div class="controls">
+        <button
+          type="button"
+          id="spinBtn"
+          class="btn btn-primary btn-large"
+        >
+          啟動離心機
+        </button>
+      </div>
     `
   );
+  const stage = ctx.stage;
+  const gForce =
+    stage.querySelector("#gForce");
+  const spinTime =
+    stage.querySelector("#spinTime");
+  const gText =
+    stage.querySelector("#gText");
+  const timeText =
+    stage.querySelector("#timeText");
+  /*
+   * 選擇 tube。
+   */
+  stage
+    .querySelectorAll(".tube-token")
+    .forEach(button => {
+      button.addEventListener("click", () => {
+        if (button.disabled) {
+          return;
+        }
+        stage
+          .querySelectorAll(".tube-token")
+          .forEach(item => {
+            item.classList.remove("selected");
+          });
 
-  ctx.stage.querySelectorAll(".tube-token").forEach(button => {
-    button.onclick = () => {
-      if (button.disabled) return;
-      ctx.stage.querySelectorAll(".tube-token").forEach(item => {
-        item.classList.remove("selected");
+        button.classList.add("selected");
+        selectedTube = button;
       });
-      button.classList.add("selected");
-      selectedTube = button;
-    };
-  });
-
-  ctx.stage.querySelectorAll(".rotor-hole").forEach(hole => {
-    hole.onclick = () => {
-      if (!selectedTube || hole.classList.contains("filled")) return;
-      const tubeId = Number(selectedTube.dataset.tube);
-      const volume = Number(selectedTube.dataset.volume);
-      const pair = Number(selectedTube.dataset.pair);
-      const position = Number(hole.dataset.hole);
-      placements[position] = {
-        tubeId,
-        volume,
-        pair
-      };
-      hole.classList.add("filled");
-      // 放入 rotor 後只顯示清楚的 tube 編號
-      hole.innerHTML = `<strong>${tubeId}</strong>`;
-      hole.title = `Tube ${tubeId}：${volume} μL`;
-      selectedTube.disabled = true;
-      selectedTube.classList.remove("selected");
-      selectedTube = null;
-    };
-  });
-  const gForce = ctx.stage.querySelector("#gForce");
-  const spinTime = ctx.stage.querySelector("#spinTime");
-  gForce.oninput = () => {
-    ctx.stage.querySelector("#gText").textContent = gForce.value;
-  };
-  spinTime.oninput = () => {
-    ctx.stage.querySelector("#timeText").textContent =
-      `${spinTime.value} min`;
-  }
-  ctx.stage.querySelector("#spinBtn").onclick = () => {
-    const occupiedPositions =
-      Object.keys(placements).map(Number);
-    if (occupiedPositions.length !== tubeCount) {
-      ctx.penalize(
-        "safety",
-        32,
-        "尚有 tube 未放入 rotor。"
-      );
-      return;
-    }
-    /*
-     * 每個位置的正對面：
-     * position + holes / 2
-     */
-    const balanced = occupiedPositions.every(position => {
-      const opposite =
-        (position + holes / 2) % holes;
-      const currentTube = placements[position];
-      const oppositeTube = placements[opposite];
-      return (
-        oppositeTube &&
-        currentTube.volume === oppositeTube.volume
-      );
     });
-    if (!balanced) {
-      ctx.penalize(
-        "safety",
-        45,
-        "Rotor 未正確配平：正對面的 tube 體積不同或缺少對應 tube。"
-      );
-      return;
-    }
-    if (
-      Number(gForce.value) !== targetG ||
-      Number(spinTime.value) !== targetTime
-    ) {
-      ctx.penalize(
-        "sampleQuality",
-        22,
-        `離心條件錯誤。本回合需要 ${targetG} ×g、${targetTime} min。`
-      );
-      return;
-    }
-    ctx.complete();
-  };
+  /*
+   * 將 tube 放入 rotor。
+   */
+  stage
+    .querySelectorAll(".rotor-hole")
+    .forEach(hole => {
+      hole.addEventListener("click", () => {
+        if (!selectedTube) {
+          ctx.penalize(
+            "safety",
+            8,
+            "請先選擇一支 tube。"
+          );
+          return;
+        }
+        if (hole.classList.contains("filled")) {
+          return;
+        }
+        const position =
+          Number(hole.dataset.hole);
+        const tubeId =
+          Number(selectedTube.dataset.tube);
+        const pair =
+          Number(selectedTube.dataset.pair);
+        const volume =
+          Number(selectedTube.dataset.volume);
+
+        placements[position] = {
+          tubeId,
+          pair,
+          volume
+        };
+        hole.classList.add("filled");
+        /*
+         * 放進 rotor 後只顯示編號。
+         */
+        hole.innerHTML = `
+          <strong
+            style="
+              transform:
+                rotate(-${(360 / holes) * position + 90}deg);
+            "
+          >
+            ${tubeId}
+          </strong>
+        `;
+        hole.title =
+          `Tube ${tubeId}：${volume} μL`;
+        selectedTube.disabled = true;
+        selectedTube.classList.remove("selected");
+        selectedTube = null;
+      });
+    });
+  gForce.addEventListener("input", () => {
+    gText.textContent = gForce.value;
+  });
+  spinTime.addEventListener("input", () => {
+    timeText.textContent =
+      `${spinTime.value} min`;
+  });
+  stage
+    .querySelector("#spinBtn")
+    .addEventListener("click", () => {
+      const positions =
+        Object.keys(placements).map(Number);
+      if (positions.length !== tubeCount) {
+        ctx.penalize(
+          "safety",
+          32,
+          "尚有 tube 未放入 rotor。"
+        );
+        return;
+      }
+      const balanced = positions.every(position => {
+        const oppositePosition =
+          (position + holes / 2) % holes;
+        const current =
+          placements[position];
+        const opposite =
+          placements[oppositePosition];
+        return Boolean(
+          opposite &&
+          current.volume === opposite.volume
+        );
+      });
+      if (!balanced) {
+        ctx.penalize(
+          "safety",
+          45,
+          "離心機未配平：正對面的 tube 容量不同，或沒有對應 tube。"
+        );
+        return;
+      }
+      if (
+        Number(gForce.value) !== targetSpeed ||
+        Number(spinTime.value) !== targetTime
+      ) {
+        ctx.penalize(
+          "sampleQuality",
+          22,
+          `離心條件錯誤。本回合需要 ${targetSpeed} ×g、${targetTime} min。`
+        );
+        return;
+      }
+      ctx.complete();
+    });
 },
+
   equipment(ctx){
     const idx=ctx.config.level-13;
     const events=[
