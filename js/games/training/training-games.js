@@ -36,10 +36,8 @@ const TrainingGames={
   roundCount(level){
     level=Number(level);
     if(level>=1&&level<=7)return 3;
-    if(level>=8&&level<=11)return 4;
-    if(level===12)return 3;
-    if(level>=13&&level<=17)return 4;
-    if(level>=18&&level<=19)return 1;
+    if(level>=8&&level<=14)return 4;
+    if(level>=15&&level<=19)return 5;
     return 1;
   },
   addRoundHeader(stage,current,total){
@@ -52,18 +50,7 @@ const TrainingGames={
     return `<div class="game-shell"><div class="game-instructions"><h3>${title}</h3><p>${text}</p></div>${inner}</div>`;
   },
   finishRound(ctx,messages=[]){
-    const items=[...new Set(messages.filter(Boolean))];
-    const overlay=document.createElement("div");
-    overlay.className="round-feedback-overlay";
-    overlay.innerHTML=`
-      <div class="round-feedback-card">
-        <strong>${items.length?"Round completed with issues":"Round completed"}</strong>
-        ${items.length?`<ul>${items.map(item=>`<li>${item}</li>`).join("")}</ul>`:"<p>All steps completed correctly.</p>"}
-      </div>
-    `;
-    ctx.stage.appendChild(overlay);
-    requestAnimationFrame(()=>overlay.classList.add("show"));
-    setTimeout(()=>ctx.complete(),1100);
+    ctx.complete();
   },
 
   pipette(ctx){
