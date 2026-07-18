@@ -484,90 +484,70 @@ function finish(pass) {
 function startLevel(level) {
   const numericLevel = Number(level);
   const config = configFor(numericLevel);
+
   if (!config) {
     console.error(`Level ${numericLevel} was not found.`);
     return;
   }
-  /*
-   * 每次開始或重新挑戰關卡時，
-   * 都要解除上一關的結算鎖定。
-   */
+
   missionFinished = false;
   active = config;
   state.currentLevel = numericLevel;
 
   resetScores();
+
   const gameModeName = $("#gameModeName");
   const gameLevelTitle = $("#gameLevelTitle");
   const bossTag = $("#bossTag");
   const gameStage = $("#gameStage");
   const modal = $("#modal");
   const drawer = $("#drawer");
-    /*
-   * 避免重新開始關卡時，
-   * 上一次的結果視窗仍停留在畫面上。
-   */
+
   modal?.classList.add("hidden");
   drawer?.classList.add("hidden");
+
   if (!gameStage) {
     console.error("#gameStage does not exist.");
     return;
   }
-    /*
-   * 先切換至遊戲頁面。
-   * 即使遊戲引擎載入失敗，也能顯示錯誤訊息，
-   * 不會看起來像按鈕完全沒有反應。
-   */
-  gameStage.innerHTML = "";
 
-  showView("#gameView");
+  gameStage.innerHTML = "";
 
   if (gameModeName) {
     gameModeName.textContent = modeName(active);
   }
-  if (gameLevelTitle) {
-      gameLevelTitle.textContent =
-        active.title ||
-        active.name ||
-        `Level ${active.level}`;
-    }
 
-    if (bossTag) {
-      bossTag.classList.toggle(
-        "hidden",
-        active.type !== "boss"
-      );
-    }
-   
-  if (!gameStage) {
-    console.error("#gameStage does not exist.");
-    return;
+  if (gameLevelTitle) {
+    gameLevelTitle.textContent =
+      active.title ||
+      active.name ||
+      `Level ${active.level}`;
   }
-  /*
-   * 清除上一關殘留的畫面與提示。
-   */
-  gameStage.innerHTML = "";
-   
+
+  if (bossTag) {
+    bossTag.classList.toggle(
+      "hidden",
+      active.type !== "boss"
+    );
+  }
+
   showView("#gameView");
+
   const context = {
     config: active,
     stage: gameStage,
     complete,
     penalize
   };
-    const context = {
-      config: active,
-      stage: gameStage,
-      complete,
-      penalize
-    };
+
+  try {
     if (active.type === "training") {
       if (
         typeof TrainingGames === "undefined" ||
         typeof TrainingGames.mount !== "function"
       ) {
         throw new Error(
-          "TrainingGames.mount() 無法使用。請檢查 training-games.js 是否正確載入。"
+          "TrainingGames.mount() 無法使用，請檢查 training-games.js。"
         );
       }
 
@@ -578,7 +558,7 @@ function startLevel(level) {
         typeof FutureModes.mount !== "function"
       ) {
         throw new Error(
-          "FutureModes.mount() 無法使用。請檢查 future-modes.js 是否正確載入。"
+          "FutureModes.mount() 無法使用，請檢查 future-modes.js。"
         );
       }
 
@@ -589,7 +569,7 @@ function startLevel(level) {
         typeof BossEngine.mount !== "function"
       ) {
         throw new Error(
-          "BossEngine.mount() 無法使用。請檢查 boss-engine.js 是否正確載入。"
+          "BossEngine.mount() 無法使用，請檢查 boss-engine.js。"
         );
       }
 
@@ -635,7 +615,10 @@ function startLevel(level) {
     `;
 
     $("#levelErrorBackBtn")
-      ?.addEventListener("click", returnToMap);
+      ?.addEventListener(
+        "click",
+        returnToMap
+      );
   }
 }
 
