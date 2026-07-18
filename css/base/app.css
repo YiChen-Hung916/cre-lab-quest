@@ -89,7 +89,6 @@ main{max-width:1080px;margin:auto;padding:clamp(12px,3vw,24px)}.view{display:non
   height:100%;
   position:relative;
   z-index:2;
-
   font-size:.9rem;
   line-height:1;
   pointer-events:none;
@@ -232,5 +231,43 @@ linear-gradient(#f1d9d9,#dfbbbb);filter:blur(10px) brightness(.95);transform:sca
   }
   .pressure-pad{
     min-width:150px;
+  }
+}
+
+@media(max-width:760px){
+  .centrifuge-wrap{
+    grid-template-columns:1fr;
+    gap:22px;
+  }
+  .rotor{
+    width:min(330px,82vw);
+  }
+  .rotor.rotor-12 .rotor-hole{
+    width:32px;
+    height:44px;
+  }
+  .rotor.rotor-16 .rotor-hole{
+    width:27px;
+    height:38px;
+    border-width:2px;
+  }
+  .rotor.rotor-24 .rotor-hole{
+    width:21px;
+    height:29px;
+  }
+  .rotor.rotor-24 .rotor-hole strong{
+    font-size:.48rem;
+  }
+  .rotor.rotor-24 .rotor-hole span{
+    font-size:.4rem;
+  }
+  .tube-bank{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .tube-token{
+    padding:10px 5px;
+  }
+  .parameter-grid{
+    grid-template-columns:1fr;
   }
 }
