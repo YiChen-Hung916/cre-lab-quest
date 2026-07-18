@@ -1,152 +1,913 @@
-let state=loadGuestState(),active=null,scores={accuracy:100,sampleQuality:100,safety:100},lastReason="",saveTimer=null;
-const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-function configFor(level){return LEVELS.find(x=>x.level===level)}
-function modeName(config){
-  if(config.type==="training")return TRAINING_META[config.mode]?.name||config.mode;
-  if(config.type==="future")return FUTURE_META[config.mode]?.name||config.mode;
+"use strict";
+
+/* =========================================================
+   CRE Lab Quest
+   Main application controller
+========================================================= */
+let state = loadGuestState();
+let active = null;
+let scores = {
+  accuracy: 100,
+  sampleQuality: 100,
+  safety: 100
+};
+let lastReason = "";
+let saveTimer = null;
+
+/* =========================================================
+   DOM helpers
+========================================================= */
+const $ = selector => document.querySelector(selector);
+
+const $$ = selector => document.querySelectorAll(selector);
+
+/* =========================================================
+   Level helpers
+========================================================= */
+
+function configFor(level) {
+  return LEVELS.find(item => item.level === level);
+}
+
+function modeName(config) {
+  if (!config) return "";
+  if (config.type === "training") {
+    return TRAINING_META[config.mode]?.name || config.mode;
+  }
+  if (config.type === "future") {
+    return FUTURE_META[config.mode]?.name || config.mode;
+  }
   return "Boss Mission";
 }
-function completedCount(){return Object.keys(state.completed||{}).length}
-function renderMetrics(){
-  updateRank(state);
-  $("#currentLevelMetric").textContent=state.currentLevel;
-  $("#unlockMetric").textContent=completedCount();
-  $("#xpMetric").textContent=state.xp;
-  $("#rankMetric").textContent=state.rank;
+function completedCount() {
+  return Object.keys(state.completed || {}).length;
 }
-function renderMap(){
-  const map=$("#levelMap");map.innerHTML="";
-  const visibleMax=state.developerMode?140:Math.min(140,state.unlockedLevel);
-  LEVELS.filter(c=>c.level<=visibleMax).forEach(c=>{
-    const b=document.createElement("button");b.className="level-node";b.dataset.level=c.level;b.textContent=c.level;
-    const canOpen=state.developerMode||c.level<=state.unlockedLevel;
-    if(canOpen)b.classList.add("unlocked");else b.disabled=true;
-    if(state.completed[c.level])b.classList.add("completed");
-    if(c.level===state.currentLevel)b.classList.add("current");
-    if(c.type==="boss"){b.classList.add("boss");const tag=document.createElement("small");tag.textContent=`${c.rounds}R`;b.appendChild(tag)}
-    b.onclick=()=>startLevel(c.level);map.appendChild(b);
-  });
-  if(!state.developerMode&&state.completed[140]){
-    const coming=document.createElement("div");coming.className="coming-soon-card";
-    coming.innerHTML="<span>TO BE CONTINUED</span><strong>COMING SOON</strong><small>新的研究任務正在準備中</small>";
-    map.appendChild(coming);
+
+/* =========================================================
+   UI rendering
+========================================================= */
+function renderMetrics() {
+  updateRank(state);
+  const currentLevelMetric = $("#currentLevelMetric");
+  const unlockMetric = $("#unlockMetric");
+  const xpMetric = $("#xpMetric");
+  const rankMetric = $("#rankMetric");
+
+  if (currentLevelMetric) {
+    currentLevelMetric.textContent = state.currentLevel;
+  }
+  if (unlockMetric) {
+    unlockMetric.textContent = completedCount();
+  }
+  if (xpMetric) {
+    xpMetric.textContent = state.xp;
+  }
+  if (rankMetric) {
+    rankMetric.textContent = state.rank;
   }
 }
-function showView(id){$$('.view').forEach(v=>v.classList.remove('active'));$(id).classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
-function resetScores(){scores={accuracy:100,sampleQuality:100,safety:100};lastReason=""}
-function penalize(stat,amount,reason){scores[stat]=Math.max(0,scores[stat]-amount);lastReason=reason;showFeedback(reason)}
-function showFeedback(text){
-  let note=$("#operationFeedback");
-  if(!note){note=document.createElement("div");note.id="operationFeedback";note.className="operation-feedback";$("#gameStage").prepend(note)}
-  note.textContent=text;note.classList.add("show");setTimeout(()=>note?.classList.remove("show"),1800);
-}
-function averageScore(){return Math.round((scores.accuracy+scores.sampleQuality+scores.safety)/3)}
-function evaluation(){const avg=averageScore();return avg>=90?"S — Outstanding":avg>=80?"A — Excellent":avg>=70?"B — Competent":"C — Passed"}
-function complete(){finish(Object.values(scores).every(v=>v>=60))}
-function failureText(){
- const map={pipette:"移液體積或tip操作錯誤，樣本濃度失準並可能交叉污染。",serological:"培養液轉移失敗，細胞缺乏養分或遭污染。",centrifuge:"離心機未平衡，設備與樣本受到影響。",equipment:"設備或培養條件錯誤，細胞未能成功培養。",plate:"加錯well，control與treatment可能混淆。",microscope:"影像失焦或過曝，未能辨識異常細胞。",boss:"綜合實驗失敗，Boss必須從第一回合重新開始。"};
- return `${map[active.mode]||"實驗失敗，樣本無法繼續使用。"} ${lastReason||""}`.trim();
-}
-async function persistState(){
-  updateRank(state);
-  if(AuthService.user){
-    clearTimeout(saveTimer);saveTimer=setTimeout(()=>AuthService.saveProgress(state).catch(console.error),300);
-  }else saveGuestState(state);
-}
-function finish(pass){
-  $("#modalIcon").textContent=pass?"🏆":active.mode==="centrifuge"?"💥":"🧫";
-  $("#modalTitle").textContent=pass?evaluation():"MISSION FAILED";
-  $("#modalMessage").textContent=pass?"三項評分皆達到通關標準。":failureText();
-  $("#modalScores").innerHTML=`<div>Accuracy<br><strong>${Math.round(scores.accuracy)}</strong></div><div>Sample Quality<br><strong>${Math.round(scores.sampleQuality)}</strong></div><div>Safety<br><strong>${Math.round(scores.safety)}</strong></div><div class="overall-score">Overall<br><strong>${averageScore()}</strong></div>`;
-  $("#nextBtn").classList.toggle("hidden",!pass);
-  if(pass){
-    const previous=state.completed[active.level];
-    state.completed[active.level]={...scores,average:averageScore(),evaluation:evaluation()};
-    state.unlockedLevel=Math.min(140,Math.max(state.unlockedLevel,active.level+1));
-    state.currentLevel=Math.min(140,active.level+1);
-    if(!previous)state.xp+=active.type==="boss"?100:25;
-    recordUsage(state,"writes",1);persistState();
+
+function renderMap() {
+  const map = $("#levelMap");
+
+  if (!map) return;
+
+  map.innerHTML = "";
+
+  const visibleMax = state.developerMode
+    ? 140
+    : Math.min(140, state.unlockedLevel);
+
+  LEVELS
+    .filter(config => config.level <= visibleMax)
+    .forEach(config => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "level-node";
+      button.dataset.level = String(config.level);
+      button.textContent = String(config.level);
+      const canOpen =
+        state.developerMode ||
+        config.level <= state.unlockedLevel;
+
+      if (canOpen) {
+        button.classList.add("unlocked");
+      } else {
+        button.disabled = true;
+      }
+      if (state.completed?.[config.level]) {
+        button.classList.add("completed");
+      }
+      if (config.level === state.currentLevel) {
+        button.classList.add("current");
+      }
+      if (config.type === "boss") {
+        button.classList.add("boss");
+        const tag = document.createElement("small");
+        tag.textContent = `${config.rounds}R`;
+        button.appendChild(tag);
+      }
+      button.addEventListener("click", () => {
+        startLevel(config.level);
+      });
+      map.appendChild(button);
+    });
+  if (
+    !state.developerMode &&
+    state.completed?.[140]
+  ) {
+    const comingSoon = document.createElement("div");
+    comingSoon.className = "coming-soon-card";
+    comingSoon.innerHTML = `
+      <span>TO BE CONTINUED</span>
+      <strong>COMING SOON</strong>
+      <small>新的研究任務正在準備中</small>
+    `;
+    map.appendChild(comingSoon);
   }
-  $("#modal").classList.remove("hidden");
 }
-function startLevel(level){
-  active=configFor(level);if(!active)return;
-  state.currentLevel=level;persistState();resetScores();
-  $("#gameModeName").textContent=modeName(active);$("#gameLevelTitle").textContent=active.title;$("#bossTag").classList.toggle("hidden",active.type!=="boss");showView("#gameView");
-  const ctx={config:active,stage:$("#gameStage"),complete,penalize};
-  if(active.type==="training")TrainingGames.mount(ctx);else if(active.type==="future")FutureModes.mount(ctx);else BossEngine.mount(ctx);
-}
-function openDrawer(html){$("#drawerContent").innerHTML=html;$("#drawer").classList.remove("hidden")}
-function accountPanel(){
-  if(!AuthService.configured)return `<span class="kicker">ACCOUNT</span><h2>Firebase尚未設定</h2><p>目前使用遊客模式，進度保存在這台裝置。請依壓縮檔內的 <code>FIREBASE-SETUP.md</code> 完成免費Firebase設定。</p>`;
-  if(!AuthService.user)return `<span class="kicker">GUEST MODE</span><h2>遊客模式</h2><p>進度只保存在這台裝置。登入Google帳號後，可跨裝置同步遊戲進度。</p><button id="googleLoginAction" class="btn btn-primary">使用Google登入</button>`;
-  return `<span class="kicker">SIGNED IN</span><h2>${AuthService.user.displayName||"Researcher"}</h2><p>${AuthService.user.email||""}</p><p>遊戲進度已同步至Firebase。</p>${AuthService.isAdmin?`<div class="notice"><strong>開發者帳號</strong><p>你可以顯示全部關卡進行測試。</p><button id="developerToggle" class="btn btn-primary">${state.developerMode?"關閉開發者模式":"啟用開發者模式"}</button></div>`:""}<button id="logoutAction" class="btn btn-soft">登出</button>`;
-}
-function bindAccountActions(){
-  $("#googleLoginAction")?.addEventListener("click",async()=>{try{await AuthService.signIn();location.reload()}catch(error){openDrawer(`<h2>登入失敗</h2><p>${error.message}</p>`)}});
-  $("#logoutAction")?.addEventListener("click",async()=>{await AuthService.signOut();state=loadGuestState();location.reload()});
-  $("#developerToggle")?.addEventListener("click",()=>{
-  state.developerMode = !state.developerMode;
-  renderMap();
-  renderMetrics();
-  updateAccountButton();
-  $("#drawer").classList.add("hidden");
+
+function showView(selector) {
+  $$(".view").forEach(view => {
+    view.classList.remove("active");
   });
-}
-function updateAccountButton(){
-  $("#loginBtn").textContent =
-    state.developerMode
-      ? "開發者模式"
-      : AuthService.user
-        ? "已登入"
-        : "遊客模式";
-  // 只有管理員已啟用開發者模式時，才顯示 Spark 用量
-  $("#usageBtn").classList.toggle(
-    "hidden",
-    !(AuthService.isAdmin && state.developerMode)
-  );
-}
-async function bootstrap(){
-  const auth=await AuthService.init();
-  if(auth.user){
-    const cloud=await AuthService.loadProgress().catch(()=>null);
-    state=mergeProgress(loadGuestState(),cloud);state.guest=false;
-    await AuthService.saveProgress(state).catch(console.error);
-  }else{state=loadGuestState();state.guest=true}
-  updateAccountButton();renderMetrics();renderMap();
-}
-$("#continueBtn").onclick=()=>startLevel(state.currentLevel);
-$("#mapBtn").onclick=()=>{renderMetrics();renderMap();showView("#homeView")};
-$("#resultMapBtn").onclick = () => {
-  $("#modal").classList.add("hidden");
-  active = null;
-  renderMetrics();
-  renderMap();
-  showView("#homeView");
+  const targetView = $(selector);
+  if (targetView) {
+    targetView.classList.add("active");
+  }
   window.scrollTo({
     top: 0,
     behavior: "smooth"
   });
-};
-$("#retryBtn").onclick=()=>{$("#modal").classList.add("hidden");startLevel(active.level)};
-$("#nextBtn").onclick=()=>{$("#modal").classList.add("hidden");if(active.level<140)startLevel(active.level+1);else{renderMap();renderMetrics();showView("#homeView");openDrawer(`<span class="kicker">TO BE CONTINUED</span><h2>COMING SOON</h2><p>你已完成目前所有研究任務。新的關卡將於後續版本加入。</p>`)}};
-$("#jumpCurrentBtn").onclick=()=>document.querySelector(`[data-level="${state.currentLevel}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
-$("#usageBtn").onclick=()=>{
-  if (!(AuthService.isAdmin && state.developerMode)) return;
-  openDrawer(renderUsagePanel(state));
-};
-$("#howBtn").onclick=()=>openDrawer(`<span class="kicker">HOW TO PLAY</span><h2>遊戲方式與通關條件</h2><ul><li>關卡地圖只顯示已完成關卡與下一個待挑戰關卡。</li><li>儀器訓練每關包含3–5個回合，整關完成後才結算。</li><li>系統會依Accuracy、Sample Quality及Safety評分。</li><li>遊戲進行中不顯示分數；結果畫面才會公布。</li><li>三項分數皆須達60才能通關。</li><li>遊客進度保存在目前裝置；登入後可同步至雲端。</li></ul>`);
-$("#loginBtn").onclick=()=>{openDrawer(accountPanel());bindAccountActions()};
-$("#closeDrawerBtn").onclick=()=>$("#drawer").classList.add("hidden");
-$("#drawer").onclick=e=>{if(e.target.id==="drawer")$("#drawer").classList.add("hidden")};
-document.addEventListener("click", event => {
-  const resultMapButton = event.target.closest("#resultMapBtn");
-  if (!resultMapButton) return;
-  event.preventDefault();
-  event.stopPropagation();
-  $("#modal").classList.add("hidden");
+}
+
+function returnToMap() {
+  const modal = $("#modal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+  active = null;
   renderMetrics();
   renderMap();
   showView("#homeView");
-});
+}
+
+/* =========================================================
+   Scoring
+========================================================= */
+function resetScores() {
+  scores = {
+    accuracy: 100,
+    sampleQuality: 100,
+    safety: 100
+  };
+  lastReason = "";
+}
+
+function penalize(stat, amount, reason) {
+  if (!(stat in scores)) {
+    console.warn(`Unknown score category: ${stat}`);
+    return;
+  }
+  scores[stat] = Math.max(
+    0,
+    scores[stat] - amount
+  );
+  lastReason = reason;
+  showFeedback(reason);
+}
+
+function showFeedback(text) {
+  const gameStage = $("#gameStage");
+  if (!gameStage) return;
+  let note = $("#operationFeedback");
+  if (!note) {
+    note = document.createElement("div");
+    note.id = "operationFeedback";
+    note.className = "operation-feedback";
+    gameStage.prepend(note);
+  }
+  note.textContent = text;
+  note.classList.add("show");
+  window.setTimeout(() => {
+    note?.classList.remove("show");
+  }, 1800);
+}
+
+function averageScore() {
+  return Math.round(
+    (
+      scores.accuracy +
+      scores.sampleQuality +
+      scores.safety
+    ) / 3
+  );
+}
+
+function evaluation() {
+  const average = averageScore();
+  if (average >= 90) {
+    return "S — Outstanding";
+  }
+  if (average >= 80) {
+    return "A — Excellent";
+  }
+  if (average >= 70) {
+    return "B — Competent";
+  }
+  return "C — Passed";
+}
+
+function complete() {
+  const passed = Object
+    .values(scores)
+    .every(value => value >= 60);
+
+  finish(passed);
+}
+
+function failureText() {
+  const messages = {
+    pipette:
+      "移液體積或 tip 操作錯誤，樣本濃度失準並可能交叉污染。",
+    serological:
+      "培養液轉移失敗，細胞缺乏養分或遭污染。",
+    centrifuge:
+      "離心機未平衡，設備與樣本受到影響。",
+    equipment:
+      "設備或培養條件錯誤，細胞未能成功培養。",
+
+    plate:
+      "加錯 well，control 與 treatment 可能混淆。",
+
+    microscope:
+      "影像失焦或過曝，未能辨識異常細胞。",
+    boss:
+      "綜合實驗失敗，Boss 必須從第一回合重新開始。"
+  };
+
+  const mode = active?.mode;
+  const baseMessage =
+    messages[mode] ||
+    "實驗失敗，樣本無法繼續使用。";
+  return `${baseMessage} ${lastReason || ""}`.trim();
+}
+
+/* =========================================================
+   Saving
+========================================================= */
+async function persistState() {
+  updateRank(state);
+  if (AuthService.user) {
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => {
+      AuthService
+        .saveProgress(state)
+        .catch(error => {
+          console.error(
+            "Failed to save cloud progress:",
+            error
+          );
+        });
+    }, 300);
+    return;
+  }
+  saveGuestState(state);
+}
+
+/* =========================================================
+   Mission result
+========================================================= */
+function finish(pass) {
+  if (!active) {
+    console.error(
+      "finish() was called without an active level."
+    );
+    return;
+  }
+  const modalIcon = $("#modalIcon");
+  const modalTitle = $("#modalTitle");
+  const modalMessage = $("#modalMessage");
+  const modalScores = $("#modalScores");
+  const nextButton = $("#nextBtn");
+  const modal = $("#modal");
+  if (modalIcon) {
+    modalIcon.textContent = pass
+      ? "🏆"
+      : active.mode === "centrifuge"
+        ? "💥"
+        : "🧫";
+  }
+  if (modalTitle) {
+    modalTitle.textContent = pass
+      ? evaluation()
+      : "MISSION FAILED";
+  }
+  if (modalMessage) {
+    modalMessage.textContent = pass
+      ? "三項評分皆達到通關標準。"
+      : failureText();
+  }
+
+  if (modalScores) {
+    modalScores.innerHTML = `
+      <div>
+        Accuracy
+        <br>
+        <strong>${Math.round(scores.accuracy)}</strong>
+      </div>
+      <div>
+        Sample Quality
+        <br>
+        <strong>${Math.round(scores.sampleQuality)}</strong>
+      </div>
+      <div>
+        Safety
+        <br>
+        <strong>${Math.round(scores.safety)}</strong>
+      </div>
+      <div class="overall-score">
+        Overall
+        <br>
+        <strong>${averageScore()}</strong>
+      </div>
+    `;
+  }
+  if (nextButton) {
+    nextButton.classList.toggle(
+      "hidden",
+      !pass
+    );
+  }
+
+  if (pass) {
+    const previousResult =
+      state.completed?.[active.level];
+
+    if (!state.completed) {
+      state.completed = {};
+    }
+    state.completed[active.level] = {
+      ...scores,
+      average: averageScore(),
+      evaluation: evaluation()
+    };
+    state.unlockedLevel = Math.min(
+      140,
+      Math.max(
+        state.unlockedLevel,
+        active.level + 1
+      )
+    );
+    state.currentLevel = Math.min(
+      140,
+      active.level + 1
+    );
+    if (!previousResult) {
+      state.xp +=
+        active.type === "boss"
+          ? 100
+          : 25;
+    }
+    recordUsage(state, "writes", 1);
+    persistState();
+  }
+  if (modal) {
+    modal.classList.remove("hidden");
+  }
+}
+
+/* =========================================================
+   Start mission
+========================================================= */
+function startLevel(level) {
+  const config = configFor(level);
+  if (!config) {
+    console.error(`Level ${level} was not found.`);
+    return;
+  }
+  active = config;
+  state.currentLevel = level;
+  persistState();
+  resetScores();
+  const gameModeName = $("#gameModeName");
+  const gameLevelTitle = $("#gameLevelTitle");
+  const bossTag = $("#bossTag");
+  const gameStage = $("#gameStage");
+
+  if (gameModeName) {
+    gameModeName.textContent = modeName(active);
+  }
+  if (gameLevelTitle) {
+    gameLevelTitle.textContent = active.title;
+  }
+  if (bossTag) {
+    bossTag.classList.toggle(
+      "hidden",
+      active.type !== "boss"
+    );
+  }
+  if (!gameStage) {
+    console.error("#gameStage does not exist.");
+    return;
+  }
+  showView("#gameView");
+  const context = {
+    config: active,
+    stage: gameStage,
+    complete,
+    penalize
+  };
+
+  if (active.type === "training") {
+    TrainingGames.mount(context);
+    return;
+  }
+
+  if (active.type === "future") {
+    FutureModes.mount(context);
+    return;
+  }
+
+  BossEngine.mount(context);
+}
+
+/* =========================================================
+   Drawer
+========================================================= */
+function openDrawer(html) {
+  const drawerContent = $("#drawerContent");
+  const drawer = $("#drawer");
+  if (!drawerContent || !drawer) return;
+  drawerContent.innerHTML = html;
+  drawer.classList.remove("hidden");
+  drawer.setAttribute("aria-hidden", "false");
+}
+
+function closeDrawer() {
+  const drawer = $("#drawer");
+
+  if (!drawer) return;
+
+  drawer.classList.add("hidden");
+  drawer.setAttribute("aria-hidden", "true");
+}
+
+/* =========================================================
+   Account
+========================================================= */
+function accountPanel() {
+  if (!AuthService.configured) {
+    return `
+      <span class="kicker">ACCOUNT</span>
+
+      <h2>Firebase 尚未設定</h2>
+
+      <p>
+        目前使用遊客模式，進度保存在這台裝置。
+      </p>
+
+      <p>
+        請確認
+        <code>firebase/firebase-config.js</code>
+        已正確設定。
+      </p>
+    `;
+  }
+
+  if (!AuthService.user) {
+    return `
+      <span class="kicker">GUEST MODE</span>
+      <h2>遊客模式</h2>
+      <p>
+        進度只保存在這台裝置。
+        登入 Google 帳號後，可跨裝置同步遊戲進度。
+      </p>
+      <button
+        type="button"
+        id="googleLoginAction"
+        class="btn btn-primary"
+      >
+        使用 Google 登入
+      </button>
+    `;
+  }
+
+  const developerSection = AuthService.isAdmin
+    ? `
+      <div class="notice">
+        <strong>開發者帳號</strong>
+
+        <p>
+          你可以顯示全部關卡並查看 Spark 用量。
+        </p>
+
+        <button
+          type="button"
+          id="developerToggle"
+          class="btn btn-primary"
+        >
+          ${
+            state.developerMode
+              ? "關閉開發者模式"
+              : "啟用開發者模式"
+          }
+        </button>
+      </div>
+    `
+    : "";
+
+  return `
+    <span class="kicker">SIGNED IN</span>
+    <h2>
+      ${escapeHtml(
+        AuthService.user.displayName ||
+        "Researcher"
+      )}
+    </h2>
+    <p>
+      ${escapeHtml(
+        AuthService.user.email || ""
+      )}
+    </p>
+    <p>
+      遊戲進度已同步至 Firebase。
+    </p>
+
+    ${developerSection}
+
+    <button
+      type="button"
+      id="logoutAction"
+      class="btn btn-soft"
+    >
+      登出
+    </button>
+  `;
+}
+
+function bindAccountActions() {
+  const googleLoginAction =
+    $("#googleLoginAction");
+  const logoutAction =
+    $("#logoutAction");
+  const developerToggle =
+    $("#developerToggle");
+
+  googleLoginAction?.addEventListener(
+    "click",
+    async () => {
+      try {
+        await AuthService.signIn();
+        window.location.reload();
+      } catch (error) {
+        openDrawer(`
+          <h2>登入失敗</h2>
+          <p>${escapeHtml(error.message)}</p>
+        `);
+      }
+    }
+  );
+
+  logoutAction?.addEventListener(
+    "click",
+    async () => {
+      try {
+        await AuthService.signOut();
+      } catch (error) {
+        console.error(
+          "Sign out failed:",
+          error
+        );
+      }
+      state = loadGuestState();
+      /*
+       * 防止管理員登出後，
+       * 遊客狀態仍殘留 Developer Mode。
+       */
+      state.developerMode = false;
+      state.guest = true;
+
+      saveGuestState(state);
+
+      window.location.reload();
+    }
+  );
+
+  developerToggle?.addEventListener(
+    "click",
+    () => {
+      if (!AuthService.isAdmin) {
+        state.developerMode = false;
+        updateAccountButton();
+        closeDrawer();
+        return;
+      }
+      state.developerMode =
+        !state.developerMode;
+      persistState();
+      renderMap();
+      renderMetrics();
+      updateAccountButton();
+      closeDrawer();
+    }
+  );
+}
+
+function updateAccountButton() {
+  const loginButton = $("#loginBtn");
+  const usageButton = $("#usageBtn");
+  /*
+   * Developer Mode 只能由管理員使用。
+   * 若雲端資料或 localStorage 被改動，也在這裡強制關閉。
+   */
+  if (
+    state.developerMode &&
+    !AuthService.isAdmin
+  ) {
+    state.developerMode = false;
+  }
+  if (loginButton) {
+    loginButton.textContent =
+      state.developerMode &&
+      AuthService.isAdmin
+        ? "開發者模式"
+        : AuthService.user
+          ? "已登入"
+          : "遊客模式";
+  }
+  if (usageButton) {
+    const canViewUsage =
+      Boolean(AuthService.isAdmin) &&
+      Boolean(state.developerMode);
+    usageButton.classList.toggle(
+      "hidden",
+      !canViewUsage
+    );
+  }
+}
+
+/* =========================================================
+   Security helper for account text
+========================================================= */
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* =========================================================
+   Static button events
+========================================================= */
+function bindStaticEvents() {
+  const continueButton = $("#continueBtn");
+  const mapButton = $("#mapBtn");
+  const resultMapButton = $("#resultMapBtn");
+  const retryButton = $("#retryBtn");
+  const nextButton = $("#nextBtn");
+  const jumpCurrentButton = $("#jumpCurrentBtn");
+  const usageButton = $("#usageBtn");
+  const howButton = $("#howBtn");
+  const loginButton = $("#loginBtn");
+  const closeDrawerButton = $("#closeDrawerBtn");
+  const drawer = $("#drawer");
+  const brandHomeLink = $("#brandHomeLink");
+
+  continueButton?.addEventListener(
+    "click",
+    () => {
+      startLevel(state.currentLevel);
+    }
+  );
+
+  mapButton?.addEventListener(
+    "click",
+    () => {
+      active = null;
+
+      renderMetrics();
+      renderMap();
+      showView("#homeView");
+    }
+  );
+
+  /*
+   * 結算畫面的「回到地圖」
+   * 只綁定一次，不再使用 document 事件代理。
+   */
+  resultMapButton?.addEventListener(
+    "click",
+    event => {
+      event.preventDefault();
+
+      returnToMap();
+    }
+  );
+
+  retryButton?.addEventListener(
+    "click",
+    () => {
+      if (!active) {
+        returnToMap();
+        return;
+      }
+      const currentLevel = active.level;
+      $("#modal")?.classList.add("hidden");
+
+      startLevel(currentLevel);
+    }
+  );
+
+  nextButton?.addEventListener(
+    "click",
+    () => {
+      if (!active) {
+        returnToMap();
+        return;
+      }
+      const completedLevel = active.level;
+      $("#modal")?.classList.add("hidden");
+      if (completedLevel < 140) {
+        startLevel(completedLevel + 1);
+        return;
+      }
+      active = null;
+      renderMap();
+      renderMetrics();
+      showView("#homeView");
+      openDrawer(`
+        <span class="kicker">
+          TO BE CONTINUED
+        </span>
+        <h2>COMING SOON</h2>
+        <p>
+          你已完成目前所有研究任務。
+          新的關卡將於後續版本加入。
+        </p>
+      `);
+    }
+  );
+
+  jumpCurrentButton?.addEventListener(
+    "click",
+    () => {
+      document
+        .querySelector(
+          `[data-level="${state.currentLevel}"]`
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+    }
+  );
+  usageButton?.addEventListener(
+    "click",
+    () => {
+      const canViewUsage =
+        Boolean(AuthService.isAdmin) &&
+        Boolean(state.developerMode);
+
+      if (!canViewUsage) {
+        return;
+      }
+      openDrawer(
+        renderUsagePanel(state)
+      );
+    }
+  );
+
+  howButton?.addEventListener(
+    "click",
+    () => {
+      openDrawer(`
+        <span class="kicker">
+          HOW TO PLAY
+        </span>
+        <h2>遊戲方式與通關條件</h2>
+        <ul>
+          <li>
+            關卡地圖只顯示已完成關卡與下一個待挑戰關卡。
+          </li>
+          <li>
+            儀器訓練每關包含 3–5 個回合，整關完成後才結算。
+          </li>
+          <li>
+            系統會依 Accuracy、Sample Quality 及 Safety 評分。
+          </li>
+          <li>
+            遊戲進行中不顯示分數；結果畫面才會公布。
+          </li>
+          <li>
+            三項分數皆須達 60 才能通關。
+          </li>
+          <li>
+            遊客進度保存在目前裝置；登入後可同步至雲端。
+          </li>
+        </ul>
+      `);
+    }
+  );
+
+  loginButton?.addEventListener(
+    "click",
+    () => {
+      openDrawer(accountPanel());
+      bindAccountActions();
+    }
+  );
+
+  closeDrawerButton?.addEventListener(
+    "click",
+    () => {
+      closeDrawer();
+    }
+  );
+  drawer?.addEventListener(
+    "click",
+    event => {
+      if (event.target === drawer) {
+        closeDrawer();
+      }
+    }
+  );
+
+  brandHomeLink?.addEventListener(
+    "click",
+    event => {
+      event.preventDefault();
+      active = null;
+      $("#modal")?.classList.add("hidden");
+      renderMetrics();
+      renderMap();
+      showView("#homeView");
+    }
+  );
+}
+
+/* =========================================================
+   Firebase initialization
+========================================================= */
+async function bootstrap() {
+  try {
+    const authResult =
+      await AuthService.init();
+    if (authResult.user) {
+      const cloudProgress =
+        await AuthService
+          .loadProgress()
+          .catch(error => {
+            console.error(
+              "Failed to load cloud progress:",
+              error
+            );
+            return null;
+          });
+      state = mergeProgress(
+        loadGuestState(),
+        cloudProgress
+      );
+      state.guest = false;
+      /*
+       * 即使 Firestore 的進度中 developerMode 為 true，
+       * 仍必須確認目前帳號確實是管理員。
+       */
+      if (!AuthService.isAdmin) {
+        state.developerMode = false;
+      }
+      await AuthService
+        .saveProgress(state)
+        .catch(error => {
+          console.error(
+            "Failed to save merged progress:",
+            error
+          );
+        });
+    } else {
+      state = loadGuestState();
+      state.guest = true;
+      state.developerMode = false;
+      saveGuestState(state);
+    }
+  } catch (error) {
+    console.error(
+      "Firebase initialization failed:",
+      error
+    );
+    state = loadGuestState();
+    state.guest = true;
+    state.developerMode = false;
+  }
+  updateAccountButton();
+  renderMetrics();
+  renderMap();
+}
+
+/* =========================================================
+   Start application
+========================================================= */
+bindStaticEvents();
 bootstrap();
