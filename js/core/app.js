@@ -242,8 +242,6 @@ function failureText() {
 
     microscope:
       "影像失焦或過曝，未能辨識異常細胞。",
-    labInspection:
-      "實驗室安全巡查未完成，仍有風險項目未被正確辨識。",
     boss:
       "綜合實驗失敗，Boss 必須從第一回合重新開始。"
   };
@@ -599,14 +597,15 @@ function bindAccountActions() {
   developerToggle?.addEventListener(
     "click",
     () => {
-      /*
-       * 這個按鈕只會出現在 AuthService.isAdmin === true
-       * 的帳號面板，因此沿用原本正常版本的切換流程。
-       * 不在這裡再次重設 developerMode，避免管理員狀態
-       * 尚未同步完成時被誤判並立即關閉。
-       */
+      if (!AuthService.isAdmin) {
+        state.developerMode = false;
+        updateAccountButton();
+        closeDrawer();
+        return;
+      }
       state.developerMode =
         !state.developerMode;
+      persistState();
       renderMap();
       renderMetrics();
       updateAccountButton();
@@ -618,6 +617,16 @@ function bindAccountActions() {
 function updateAccountButton() {
   const loginButton = $("#loginBtn");
   const usageButton = $("#usageBtn");
+  /*
+   * Developer Mode 只能由管理員使用。
+   * 若雲端資料或 localStorage 被改動，也在這裡強制關閉。
+   */
+  if (
+    state.developerMode &&
+    !AuthService.isAdmin
+  ) {
+    state.developerMode = false;
+  }
   if (loginButton) {
     loginButton.textContent =
       state.developerMode &&
@@ -862,6 +871,13 @@ async function bootstrap() {
         cloudProgress
       );
       state.guest = false;
+      /*
+       * 即使 Firestore 的進度中 developerMode 為 true，
+       * 仍必須確認目前帳號確實是管理員。
+       */
+      if (!AuthService.isAdmin) {
+        state.developerMode = false;
+      }
       await AuthService
         .saveProgress(state)
         .catch(error => {
