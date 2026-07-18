@@ -14,6 +14,12 @@ let scores = {
 let lastReason = "";
 let saveTimer = null;
 
+/*
+ * 防止同一關因為重複觸發 complete()
+ * 而出現兩次結算、重複加 XP 或重複解鎖。
+ */
+let missionFinished = false;
+
 /* =========================================================
    DOM helpers
 ========================================================= */
@@ -206,22 +212,51 @@ function averageScore() {
 
 function evaluation() {
   const average = averageScore();
+
   if (average >= 90) {
     return "S — Outstanding";
   }
+
   if (average >= 80) {
     return "A — Excellent";
   }
+
   if (average >= 70) {
     return "B — Competent";
   }
-  return "C — Passed";
+
+  if (average >= 60) {
+    return "C — Passed";
+  }
+
+  return "D — Needs Improvement";
 }
 
 function complete() {
-  const passed = Object
-    .values(scores)
-    .every(value => value >= 60);
+  /*
+   * TrainingGames.mount() 會在所有回合完成後，
+   * 才呼叫最外層的 complete()。
+   *
+   * 每個回合中的錯誤只會透過 penalize() 扣分，
+   * 不會立刻中止整關。
+   */
+  if (missionFinished) {
+    return;
+  }
+
+  missionFinished = true;
+
+  const passingScore = 60;
+
+  /*
+   * 三個評分類別都必須達到 60 分才算通關。
+   * 判定只在整關全部回合完成後進行。
+   */
+  const passed = [
+    scores.accuracy,
+    scores.sampleQuality,
+    scores.safety
+  ].every(score => score >= passingScore);
 
   finish(passed);
 }
@@ -291,6 +326,7 @@ function finish(pass) {
   const modalScores = $("#modalScores");
   const nextButton = $("#nextBtn");
   const modal = $("#modal");
+  const finalAverage = averageScore();
   if (modalIcon) {
     modalIcon.textContent = pass
       ? "🏆"
@@ -339,7 +375,12 @@ function finish(pass) {
       !pass
     );
   }
-
+  if (retryButton) {
+    retryButton.classList.remove("hidden");
+    retryButton.textContent = pass
+      ? "重新挑戰"
+      : "再試一次";
+  }
   if (pass) {
     const previousResult =
       state.completed?.[active.level];
@@ -347,11 +388,36 @@ function finish(pass) {
     if (!state.completed) {
       state.completed = {};
     }
-    state.completed[active.level] = {
-      ...scores,
-      average: averageScore(),
-      evaluation: evaluation()
-    };
+
+       /*
+     * 若玩家重複挑戰同一關，
+     * 只在新分數更高時更新紀錄。
+     */
+    const previousAverage =
+      Number(previousResult?.average || 0);
+
+    if (
+      !previousResult ||
+      finalAverage >= previousAverage
+    ) {
+      state.completed[active.level] = {
+        accuracy:
+          Math.round(scores.accuracy),
+
+        sampleQuality:
+          Math.round(scores.sampleQuality),
+
+        safety:
+          Math.round(scores.safety),
+
+        average:
+          finalAverage,
+
+        evaluation:
+          evaluation()
+      };
+    }
+
     state.unlockedLevel = Math.min(
       140,
       Math.max(
@@ -363,6 +429,10 @@ function finish(pass) {
       140,
       active.level + 1
     );
+   /*
+     * 第一次通關才增加 XP，
+     * 重複挑戰不會重複獲得 XP。
+     */
     if (!previousResult) {
       state.xp +=
         active.type === "boss"
@@ -386,6 +456,12 @@ function startLevel(level) {
     console.error(`Level ${level} was not found.`);
     return;
   }
+  /*
+   * 每次開始或重新挑戰關卡時，
+   * 都要解除上一關的結算鎖定。
+   */
+  missionFinished = false;
+
   active = config;
   state.currentLevel = level;
   persistState();
@@ -394,6 +470,12 @@ function startLevel(level) {
   const gameLevelTitle = $("#gameLevelTitle");
   const bossTag = $("#bossTag");
   const gameStage = $("#gameStage");
+  const modal = $("#modal");
+    /*
+   * 避免重新開始關卡時，
+   * 上一次的結果視窗仍停留在畫面上。
+   */
+  modal?.classList.add("hidden");
 
   if (gameModeName) {
     gameModeName.textContent = modeName(active);
@@ -411,6 +493,11 @@ function startLevel(level) {
     console.error("#gameStage does not exist.");
     return;
   }
+  /*
+   * 清除上一關殘留的畫面與提示。
+   */
+  gameStage.innerHTML = "";
+   
   showView("#gameView");
   const context = {
     config: active,
@@ -428,8 +515,16 @@ function startLevel(level) {
     FutureModes.mount(context);
     return;
   }
+  if (active.type === "boss") {
+    BossEngine.mount(context);
+    return;
+  }
 
-  BossEngine.mount(context);
+  console.error(
+    `Unknown level type: ${active.type}`
+  );
+}
+  /* BossEngine.mount(context);*/
 }
 
 /* =========================================================
