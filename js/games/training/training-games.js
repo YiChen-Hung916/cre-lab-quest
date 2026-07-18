@@ -33,53 +33,180 @@ const TrainingGames={
   shell(title,text,inner){
     return `<div class="game-shell"><div class="game-instructions"><h3>${title}</h3><p>${text}</p></div>${inner}</div>`;
   },
-  pipette(ctx){
-    const targets=[5,10,18,20,50,75,100,150,200,500,800], target=targets[(ctx.config.level+ctx.config.roundIndex*2-3)%targets.length];
-    const correct=target<=10?"P10":target<=20?"P20":target<=200?"P200":"P1000";
-    let selected=null,digits=[0,0,0],tip=false,liquid=false;
-    const stage=ctx.stage;
-    stage.innerHTML=this.shell("Micropipette 精準移液",`請選擇正確pipette並吸取 ${target} μL。`,
-    `<div class="lab-bench">
-      <div class="bench-card task-card"><strong>任務</strong><p>${target} μL → Tube B</p><small>建議量程：${correct}</small></div>
-      <div class="bench-card status-card"><strong>操作狀態</strong><p id="pipetteStatus">尚未選擇pipette</p></div>
-      <div class="pipette-rack">
-        ${["P10","P20","P200","P1000"].map(p=>`<button class="pipette ${p.toLowerCase()}" data-p="${p}"><label>${p}</label><span class="range">${p==="P10"?"0.5–10":p==="P20"?"2–20":p==="P200"?"20–200":"100–1000"} μL</span></button>`).join("")}
+pipette(ctx){
+  const randomInt = (min, max) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+  // 真正隨機產生 1–1000 μL，不從固定清單抽選
+  const target = randomInt(1, 1000);
+  const correct =
+    target <= 10
+      ? "P10"
+      : target <= 20
+        ? "P20"
+        : target <= 200
+          ? "P200"
+          : "P1000";
+  let selected = null;
+  let digits = [0, 0, 0, 0];
+  let tip = false;
+  let liquid = false;
+  const stage = ctx.stage;
+  stage.innerHTML = this.shell(
+    "Micropipette 精準移液",
+    `請選擇正確 pipette 並吸取 ${target} μL。`,
+    `
+      <div class="pipette-task">
+        <strong>任務</strong>
+        <span>${target} μL → Tube B</span>
+        <small>建議量程：${correct}</small>
       </div>
-    </div>
-    <div class="controls">
-      <div class="control-group"><strong>容量顯示窗</strong><div class="digit-controls">
-        ${[0,1,2].map(i=>`<div class="digit"><button data-dir="1" data-i="${i}">▲</button><span id="digit${i}">0</span><button data-dir="-1" data-i="${i}">▼</button></div>`).join("")}
-      </div></div>
-      <div class="control-group"><strong>Tip盒</strong><div class="tip-box">${Array.from({length:24},(_,i)=>`<button class="tip-dot" data-tip="${i}"></button>`).join("")}</div></div>
-    </div>
-    <div class="liquid-scene">
-      <div><div class="tip-visual"><div id="tipFill" class="tip-fill"></div></div><p style="text-align:center">Tip內液體</p></div>
-      <div class="pressure-pad"><button id="plungerBtn" class="plunger">按壓吸液／排液</button><small>選對pipette、容量與tip後操作</small></div>
-    </div>`);
-    const status=stage.querySelector("#pipetteStatus");
-    stage.querySelectorAll(".pipette").forEach(btn=>btn.onclick=()=>{
-      stage.querySelectorAll(".pipette").forEach(x=>x.classList.remove("selected"));btn.classList.add("selected");selected=btn.dataset.p;
-      status.textContent=`已選擇 ${selected}`;
-      if(selected!==correct)ctx.penalize("accuracy",18,"選擇了不適合的量程。");
-    });
-    stage.querySelectorAll(".digit button").forEach(btn=>btn.onclick=()=>{
-      const i=+btn.dataset.i,dir=+btn.dataset.dir;digits[i]=(digits[i]+dir+10)%10;stage.querySelector(`#digit${i}`).textContent=digits[i];
-    });
-    stage.querySelectorAll(".tip-dot").forEach(btn=>btn.onclick=()=>{
-      if(btn.classList.contains("used"))return;stage.querySelectorAll(".tip-dot").forEach(x=>x.classList.remove("selected"));btn.classList.add("used");tip=true;status.textContent="Tip安裝完成";
-    });
-    stage.querySelector("#plungerBtn").onclick=()=>{
-      const numeric=digits[0]*100+digits[1]*10+digits[2];
-      const expected=target;
-      if(!selected||!tip){ctx.penalize("safety",22,"未正確安裝pipette或tip。");return}
-      const tolerance=selected==="P1000"?10:2;
-      if(Math.abs(numeric-expected)>tolerance){ctx.penalize("accuracy",22,"容量設定與任務不符。");return}
-      liquid=!liquid;
-      stage.querySelector("#tipFill").style.height=liquid?"65%":"0";
-      status.textContent=liquid?"已吸取液體，再按一次排入Tube B":"排液完成";
-      if(!liquid)ctx.complete();
+      <div id="pipetteStatus" class="operation-status">
+        尚未選擇 pipette
+      </div>
+      <div class="pipette-options">
+        ${["P10", "P20", "P200", "P1000"].map(p => `
+          <button type="button" class="pipette" data-p="${p}">
+            <strong>${p}</strong>
+            <small>
+              ${
+                p === "P10"
+                  ? "0.5–10"
+                  : p === "P20"
+                    ? "2–20"
+                    : p === "P200"
+                      ? "20–200"
+                      : "100–1000"
+              } μL
+            </small>
+          </button>
+        `).join("")}
+      </div>
+      
+      <div class="volume-display">
+        <strong>容量顯示窗</strong>
+        <div class="digit-display">
+          ${[0, 1, 2, 3].map(i => `
+            <div class="digit">
+              <button
+                type="button"
+                data-i="${i}"
+                data-dir="1"
+                aria-label="增加第 ${i + 1} 位數"
+              >▲</button>
+              <span id="digit${i}">0</span>
+              <button
+                type="button"
+                data-i="${i}"
+                data-dir="-1"
+                aria-label="減少第 ${i + 1} 位數"
+              >▼</button>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      <div class="tip-box">
+        <strong>Tip 盒</strong>
+        <div class="tip-grid">
+          ${Array.from({length: 24}, () => `
+            <button
+              type="button"
+              class="tip-dot"
+              aria-label="安裝新 tip"
+            ></button>
+          `).join("")}
+        </div>
+      </div>
+      <div class="pipette-action">
+        <div class="tip-visual">
+          <div id="tipFill"></div>
+        </div>
+        <button type="button" id="plungerBtn" class="btn btn-primary">
+          按壓吸液／排液
+        </button>
+        <small>選對 pipette、容量與 tip 後操作</small>
+      </div>
+    `
+  );
+
+  const status = stage.querySelector("#pipetteStatus");
+  stage.querySelectorAll(".pipette").forEach(btn => {
+    btn.onclick = () => {
+      stage.querySelectorAll(".pipette").forEach(item => {
+        item.classList.remove("selected");
+      });
+      btn.classList.add("selected");
+      selected = btn.dataset.p;
+      status.textContent = `已選擇 ${selected}`;
+      if (selected !== correct) {
+        ctx.penalize(
+          "accuracy",
+          18,
+          "選擇了不適合的 pipette 量程。"
+        );
+      }
     };
-  },
+  });
+  stage.querySelectorAll(".digit button").forEach(btn => {
+    btn.onclick = () => {
+      const index = Number(btn.dataset.i);
+      const direction = Number(btn.dataset.dir);
+
+      digits[index] = (digits[index] + direction + 10) % 10;
+      stage.querySelector(`#digit${index}`).textContent = digits[index];
+    };
+  });
+  stage.querySelectorAll(".tip-dot").forEach(btn => {
+    btn.onclick = () => {
+      if (btn.classList.contains("used")) return;
+      stage.querySelectorAll(".tip-dot").forEach(item => {
+        item.classList.remove("selected");
+      });
+      btn.classList.add("used", "selected");
+      tip = true;
+      status.textContent = "Tip 安裝完成";
+    };
+  });
+  stage.querySelector("#plungerBtn").onclick = () => {
+    const numeric =
+      digits[0] * 1000 +
+      digits[1] * 100 +
+      digits[2] * 10 +
+      digits[3];
+    if (!selected || !tip) {
+      ctx.penalize(
+        "safety",
+        22,
+        "尚未正確選擇 pipette 或安裝 tip。"
+      );
+      return;
+    }
+    if (selected !== correct) {
+      ctx.penalize(
+        "accuracy",
+        22,
+        `此容量應使用 ${correct}。`
+      );
+      return;
+    }
+    if (numeric !== target) {
+      ctx.penalize(
+        "accuracy",
+        22,
+        `容量設定錯誤，目前為 ${numeric} μL，任務要求 ${target} μL。`
+      );
+      return;
+    }
+    liquid = !liquid;
+    stage.querySelector("#tipFill").style.height =
+      liquid ? "65%" : "0";
+    status.textContent = liquid
+      ? `已吸取 ${target} μL，再按一次排入 Tube B`
+      : "排液完成";
+    if (!liquid) {
+      ctx.complete();
+    }
+  };
+},
   serological(ctx){
     let volume=0;
     const target=[5,10,15,20,25][(ctx.config.level+ctx.config.roundIndex-7)%5];
@@ -95,26 +222,260 @@ const TrainingGames={
     ctx.stage.querySelector("#dispenseBtn").onclick=()=>{if(Math.abs(volume-target)<=1)ctx.complete();else ctx.penalize("accuracy",24,"吸取體積不正確。")};
   },
   centrifuge(ctx){
-    const count=Math.min(8,2+Math.floor((ctx.config.level-9)*2));
-    let selectedTube=null,placements={};
-    const holes=8;
-    ctx.stage.innerHTML=this.shell("Centrifuge 配平",`將 ${count} 支tube放入可平衡的位置，再啟動離心機。`,
-    `<div class="centrifuge-wrap"><div id="rotor" class="rotor">${Array.from({length:holes},(_,i)=>`<button class="rotor-hole" data-hole="${i}" style="left:${50+38*Math.cos((i/holes)*Math.PI*2-Math.PI/2)}%;top:${50+38*Math.sin((i/holes)*Math.PI*2-Math.PI/2)}%;transform:translate(-50%,-50%) rotate(${i/holes*360}deg)">${i+1}</button>`).join("")}</div>
-    <div><div class="tube-bank">${Array.from({length:count},(_,i)=>`<button class="tube-token" data-tube="${i}">Tube ${i+1}<br><small>${i%2?500:500} μL</small></button>`).join("")}</div>
-    <div class="parameter-grid" style="margin-top:14px"><label>×g<input id="gForce" type="range" min="500" max="3000" step="100" value="1500"><span id="gText">1500</span></label><label>時間<input id="spinTime" type="range" min="1" max="10" value="5"><span id="timeText">5 min</span></label></div>
-    <button id="spinBtn" class="btn btn-primary" style="width:100%;margin-top:12px">啟動離心機</button></div></div>`);
-    ctx.stage.querySelectorAll(".tube-token").forEach(b=>b.onclick=()=>{ctx.stage.querySelectorAll(".tube-token").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");selectedTube=b});
-    ctx.stage.querySelectorAll(".rotor-hole").forEach(h=>h.onclick=()=>{if(!selectedTube||h.classList.contains("filled"))return;h.classList.add("filled");h.textContent="Tube";placements[h.dataset.hole]=selectedTube.dataset.tube;selectedTube.disabled=true;selectedTube.classList.remove("selected");selectedTube=null});
-    const g=ctx.stage.querySelector("#gForce"),t=ctx.stage.querySelector("#spinTime");g.oninput=()=>ctx.stage.querySelector("#gText").textContent=g.value;t.oninput=()=>ctx.stage.querySelector("#timeText").textContent=`${t.value} min`;
-    ctx.stage.querySelector("#spinBtn").onclick=()=>{
-      const positions=Object.keys(placements).map(Number);
-      if(positions.length!==count){ctx.penalize("safety",32,"尚有tube未放入rotor。");return}
-      const balanced=positions.every(p=>positions.includes((p+holes/2)%holes));
-      if(!balanced){ctx.penalize("safety",45,"離心機未配平，設備劇烈震動。");return}
-      if(+g.value<1000||+t.value<3){ctx.penalize("sampleQuality",22,"離心條件不足，pellet未形成。");return}
-      ctx.complete();
+  const randomInt = (min, max) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+
+  const level = ctx.config.level;
+  const round = ctx.config.roundIndex || 1;
+
+  /*
+   * Lv9：8孔
+   * Lv10：12孔
+   * Lv11：16孔
+   * Lv12以上或較後回合：24孔
+   */
+  let holes = 8;
+
+  if (level >= 12 || (level >= 11 && round >= 3)) {
+    holes = 24;
+  } else if (level >= 11) {
+    holes = 16;
+  } else if (level >= 10) {
+    holes = 12;
+  }
+
+  const maximumPairs =
+    holes === 8 ? 3 :
+    holes === 12 ? 4 :
+    holes === 16 ? 6 :
+    8;
+
+  const difficultyPairs = Math.min(
+    maximumPairs,
+    Math.max(1, Math.floor((level - 8 + round) / 2))
+  );
+
+  const pairCount = difficultyPairs;
+  const tubeCount = pairCount * 2;
+
+  // 可出現的離心條件
+  const gOptions = [1000, 1500, 2000, 2500, 3000];
+  const timeOptions = [3, 5, 7, 10];
+
+  const targetG =
+    gOptions[randomInt(0, gOptions.length - 1)];
+
+  const targetTime =
+    timeOptions[randomInt(0, timeOptions.length - 1)];
+
+  /*
+   * 每一對 tube 使用相同容量，但不同對之間可以不同。
+   * 玩家必須把同容量的 tube 放到正對面。
+   */
+  const tubes = [];
+
+  for (let pair = 0; pair < pairCount; pair++) {
+    const volume = randomInt(1, 20) * 50;
+
+    tubes.push({
+      id: pair * 2 + 1,
+      volume,
+      pair
+    });
+
+    tubes.push({
+      id: pair * 2 + 2,
+      volume,
+      pair
+    });
+  }
+
+  // 洗牌，避免成對 tube 永遠排在一起
+  for (let i = tubes.length - 1; i > 0; i--) {
+    const j = randomInt(0, i);
+    [tubes[i], tubes[j]] = [tubes[j], tubes[i]];
+  }
+
+  let selectedTube = null;
+  const placements = {};
+
+  ctx.stage.innerHTML = this.shell(
+    "Centrifuge 配平",
+    `將 ${tubeCount} 支不同容量的 tube 正確配平，並設定指定離心條件。`,
+    `
+      <div class="centrifuge-instructions">
+        <strong>任務條件</strong>
+        <span>${targetG} ×g</span>
+        <span>${targetTime} min</span>
+        <small>
+          正對面的 tube 必須具有相同體積。
+        </small>
+      </div>
+
+      <div
+        class="centrifuge-rotor rotor-${holes}"
+        style="--rotor-holes:${holes}"
+      >
+        ${Array.from({length: holes}, (_, index) => {
+          const angle = (360 / holes) * index;
+
+          return `
+            <button
+              type="button"
+              class="rotor-hole"
+              data-hole="${index}"
+              style="--hole-angle:${angle}deg"
+              aria-label="Rotor position ${index + 1}"
+            >
+              <small>${index + 1}</small>
+            </button>
+          `;
+        }).join("")}
+      </div>
+
+      <div class="tube-tray">
+        ${tubes.map(tube => `
+          <button
+            type="button"
+            class="tube-token"
+            data-tube="${tube.id}"
+            data-volume="${tube.volume}"
+            data-pair="${tube.pair}"
+          >
+            <strong>${tube.id}</strong>
+            <span>${tube.volume} μL</span>
+          </button>
+        `).join("")}
+      </div>
+
+      <div class="centrifuge-controls">
+        <label>
+          離心力：
+          <strong><span id="gText">${targetG}</span> ×g</strong>
+
+          <input
+            id="gForce"
+            type="range"
+            min="500"
+            max="3000"
+            step="500"
+            value="${targetG}"
+          >
+        </label>
+
+        <label>
+          時間：
+          <strong><span id="timeText">${targetTime} min</span></strong>
+
+          <input
+            id="spinTime"
+            type="range"
+            min="1"
+            max="10"
+            step="1"
+            value="${targetTime}"
+          >
+        </label>
+      </div>
+
+      <button type="button" id="spinBtn" class="btn btn-primary">
+        啟動離心機
+      </button>
+    `
+  );
+
+  ctx.stage.querySelectorAll(".tube-token").forEach(button => {
+    button.onclick = () => {
+      if (button.disabled) return;
+
+      ctx.stage.querySelectorAll(".tube-token").forEach(item => {
+        item.classList.remove("selected");
+      });
+
+      button.classList.add("selected");
+      selectedTube = button;
     };
-  },
+  });
+
+  ctx.stage.querySelectorAll(".rotor-hole").forEach(hole => {
+    hole.onclick = () => {
+      if (!selectedTube || hole.classList.contains("filled")) return;
+      const tubeId = Number(selectedTube.dataset.tube);
+      const volume = Number(selectedTube.dataset.volume);
+      const pair = Number(selectedTube.dataset.pair);
+      const position = Number(hole.dataset.hole);
+      placements[position] = {
+        tubeId,
+        volume,
+        pair
+      };
+      hole.classList.add("filled");
+      // 放入 rotor 後只顯示清楚的 tube 編號
+      hole.innerHTML = `<strong>${tubeId}</strong>`;
+      hole.title = `Tube ${tubeId}：${volume} μL`;
+      selectedTube.disabled = true;
+      selectedTube.classList.remove("selected");
+      selectedTube = null;
+    };
+  });
+  const gForce = ctx.stage.querySelector("#gForce");
+  const spinTime = ctx.stage.querySelector("#spinTime");
+  gForce.oninput = () => {
+    ctx.stage.querySelector("#gText").textContent = gForce.value;
+  };
+  spinTime.oninput = () => {
+    ctx.stage.querySelector("#timeText").textContent =
+      `${spinTime.value} min`;
+  }
+  ctx.stage.querySelector("#spinBtn").onclick = () => {
+    const occupiedPositions =
+      Object.keys(placements).map(Number);
+    if (occupiedPositions.length !== tubeCount) {
+      ctx.penalize(
+        "safety",
+        32,
+        "尚有 tube 未放入 rotor。"
+      );
+      return;
+    }
+    /*
+     * 每個位置的正對面：
+     * position + holes / 2
+     */
+    const balanced = occupiedPositions.every(position => {
+      const opposite =
+        (position + holes / 2) % holes;
+
+      const currentTube = placements[position];
+      const oppositeTube = placements[opposite];
+
+      return (
+        oppositeTube &&
+        currentTube.volume === oppositeTube.volume
+      );
+    });
+    if (!balanced) {
+      ctx.penalize(
+        "safety",
+        45,
+        "Rotor 未正確配平：正對面的 tube 體積不同或缺少對應 tube。"
+      );
+      return;
+    }
+    if (
+      Number(gForce.value) !== targetG ||
+      Number(spinTime.value) !== targetTime
+    ) {
+      ctx.penalize(
+        "sampleQuality",
+        22,
+        `離心條件錯誤。本回合需要 ${targetG} ×g、${targetTime} min。`
+      );
+      return;
+    }
+    ctx.complete();
+  };
+},
   equipment(ctx){
     const idx=ctx.config.level-13;
     const events=[
