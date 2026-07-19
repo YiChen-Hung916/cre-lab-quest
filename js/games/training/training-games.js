@@ -8,6 +8,634 @@ const TRAINING_META={
   labInspection:{name:"Lab Safety Inspection",icon:"⚠️"}
 };
 
+/******************************************************************************
+ * QUESTION BANK
+ *
+ * Level12
+ *   General Laboratory Knowledge
+ *
+ * Level13
+ *   Storage
+ *
+ * Level14
+ *   Solution Preparation
+ ******************************************************************************/
+
+const QUESTION_BANK={
+
+12:[
+
+{
+title:"Incubator",
+text:"哺乳類細胞最常使用的培養條件為？",
+options:[
+"25°C、0% CO₂",
+"37°C、5% CO₂",
+"42°C、10% CO₂",
+"4°C"
+],
+answer:1
+},
+
+{
+title:"Biosafety Cabinet",
+text:"操作細胞時應在哪個設備內進行？",
+options:[
+"Chemical Hood",
+"Biosafety Cabinet",
+"Incubator",
+"Oven"
+],
+answer:1
+},
+
+{
+title:"Cell Confluence",
+text:"一般貼附型細胞最常在多少 confluence 進行 passage？",
+options:[
+"10%",
+"30%",
+"70~90%",
+"100%"
+],
+answer:2
+},
+
+{
+title:"Mycoplasma",
+text:"Mycoplasma contamination 最容易造成？",
+options:[
+"增加 CO₂",
+"影響細胞實驗結果",
+"培養基變成紅色",
+"PBS結晶"
+],
+answer:1
+},
+
+{
+title:"Vortex",
+text:"使用 Vortex 的主要目的？",
+options:[
+"離心",
+"混合",
+"冷凍",
+"滅菌"
+],
+answer:1
+},
+
+{
+title:"Western Blot",
+text:"Transfer 後通常先進行哪一步？",
+options:[
+"Primary antibody",
+"Blocking",
+"ECL",
+"Exposure"
+],
+answer:1
+},
+
+{
+title:"Primary Antibody",
+text:"Primary antibody 的主要功能？",
+options:[
+"辨識目標蛋白",
+"產生化學發光",
+"增加蛋白濃度",
+"染色細胞核"
+],
+answer:0
+},
+
+{
+title:"Secondary Antibody",
+text:"Secondary antibody 最主要用途？",
+options:[
+"辨識DNA",
+"結合Primary antibody",
+"固定蛋白",
+"裂解細胞"
+],
+answer:1
+},
+
+{
+title:"PVDF",
+text:"Western blot 中 PVDF membrane 用於？",
+options:[
+"Protein Transfer",
+"PCR",
+"Cell Culture",
+"DNA Extraction"
+],
+answer:0
+},
+
+{
+title:"Protein Ladder",
+text:"Protein ladder 的用途？",
+options:[
+"定量DNA",
+"Protein Molecular Weight Marker",
+"Cell counting",
+"Protein extraction"
+],
+answer:1
+},
+
+{
+title:"Trypsin",
+text:"Trypsin 最常用於？",
+options:[
+"裂解蛋白",
+"細胞脫附(passage)",
+"Protein transfer",
+"RNA extraction"
+],
+answer:1
+},
+
+{
+title:"PBS",
+text:"PBS 最主要用途？",
+options:[
+"裂解細胞",
+"洗滌細胞",
+"固定細胞",
+"Protein transfer"
+],
+answer:1
+},
+
+{
+title:"FBS",
+text:"FBS 最主要功能？",
+options:[
+"提供細胞營養",
+"提供DNA",
+"Protein marker",
+"Cell stain"
+],
+answer:0
+},
+
+{
+title:"Microscope",
+text:"使用顯微鏡時應先調整？",
+options:[
+"細焦",
+"粗焦",
+"曝光",
+"相機"
+],
+answer:1
+},
+
+{
+title:"Centrifuge",
+text:"離心前最重要的是？",
+options:[
+"配平(Balance)",
+"開蓋",
+"提高速度",
+"縮短時間"
+],
+answer:0
+}
+
+],
+
+13:[
+
+{
+name:"DMEM",
+answer:"4°C"
+},
+
+{
+name:"RPMI-1640",
+answer:"4°C"
+},
+
+{
+name:"MEM",
+answer:"4°C"
+},
+
+{
+name:"PBS",
+answer:"Room Temperature"
+},
+
+{
+name:"HBSS",
+answer:"4°C"
+},
+
+{
+name:"Trypsin",
+answer:"-20°C"
+},
+
+{
+name:"FBS",
+answer:"-20°C"
+},
+
+{
+name:"Penicillin/Streptomycin",
+answer:"-20°C"
+},
+
+{
+name:"Glutamine",
+answer:"-20°C"
+},
+
+{
+name:"Protein Ladder",
+answer:"-20°C"
+},
+
+{
+name:"Primary Antibody",
+answer:"-20°C"
+},
+
+{
+name:"Secondary Antibody",
+answer:"4°C"
+},
+
+{
+name:"RIPA Buffer",
+answer:"4°C"
+},
+
+{
+name:"TBST",
+answer:"Room Temperature"
+},
+
+{
+name:"TBS",
+answer:"Room Temperature"
+},
+
+{
+name:"BSA Powder",
+answer:"Room Temperature"
+},
+
+{
+name:"BSA Solution",
+answer:"4°C"
+},
+
+{
+name:"Skim Milk Powder",
+answer:"Room Temperature"
+},
+
+{
+name:"PVDF Membrane",
+answer:"Room Temperature"
+},
+
+{
+name:"Nitrocellulose Membrane",
+answer:"Room Temperature"
+},
+
+{
+name:"TRIzol",
+answer:"4°C"
+},
+
+{
+name:"RNA Sample",
+answer:"-80°C"
+},
+
+{
+name:"DNA Sample",
+answer:"-20°C"
+},
+
+{
+name:"Protein Lysate",
+answer:"-80°C"
+},
+
+{
+name:"Cell Pellet",
+answer:"-80°C"
+},
+
+{
+name:"Cell Line",
+answer:"Liquid Nitrogen"
+},
+
+{
+name:"Organoid",
+answer:"Liquid Nitrogen"
+},
+
+{
+name:"Plasmid DNA",
+answer:"-20°C"
+},
+
+{
+name:"PCR Mix",
+answer:"-20°C"
+},
+
+{
+name:"Restriction Enzyme",
+answer:"-20°C"
+},
+
+{
+name:"Loading Dye",
+answer:"-20°C"
+},
+
+{
+name:"ECL Reagent",
+answer:"4°C"
+},
+
+{
+name:"Paraformaldehyde",
+answer:"4°C"
+},
+
+{
+name:"Methanol",
+answer:"Room Temperature"
+},
+
+{
+name:"DMSO",
+answer:"Room Temperature"
+}
+]
+};
+
+const STORAGE_OPTIONS=[
+"Room Temperature",
+"4°C",
+"-20°C",
+"-80°C",
+"Liquid Nitrogen"
+];
+
+function randomChoice(arr){
+    return arr[
+        Math.floor(
+            Math.random()*arr.length
+        )
+    ];
+}
+
+function randomInt(min,max){
+    return Math.floor(
+        Math.random()*(max-min+1)
+    )+min;
+}
+
+function generateSolutionQuestion(){
+
+    const type=randomInt(1,5);
+
+    switch(type){
+
+        case 1:
+            return generatePBSQuestion();
+
+        case 2:
+            return generateCompleteMediumQuestion();
+
+        case 3:
+            return generateDrugDilutionQuestion();
+
+        case 4:
+            return generatePowderQuestion();
+
+        default:
+            return generateStockQuestion();
+
+    }
+
+}
+
+function generatePBSQuestion(){
+
+    const stock=randomChoice([5,10,20,50]);
+
+    const volume=randomChoice([
+        50,
+        100,
+        250,
+        500,
+        1000
+    ]);
+
+    return{
+
+        title:"PBS Dilution",
+
+        text:`需要配製 ${volume} mL 1× PBS，目前只有 ${stock}× PBS。應加入多少 mL stock？`,
+
+        answer:volume/stock,
+
+        unit:"mL"
+
+    };
+
+}
+
+function generateCompleteMediumQuestion(){
+
+    const volume=randomChoice([
+        100,
+        250,
+        500,
+        1000
+    ]);
+
+    return{
+
+        title:"Complete Medium",
+
+        text:
+`配製 ${volume} mL complete medium。
+
+FBS 10%
+
+Pen/Strep 1%
+
+請問：
+
+FBS=? mL
+
+Pen/Strep=? mL
+
+DMEM=? mL`,
+
+        answer:{
+            fbs:volume*.1,
+            ps:volume*.01,
+            dmem:volume*.89
+        }
+
+    };
+
+}
+
+function generatePowderQuestion(){
+
+    const mass=randomChoice([
+        50,
+        100,
+        200,
+        500
+    ]);
+
+    const concentration=randomChoice([
+        5,
+        10,
+        20,
+        25,
+        50
+    ]);
+
+    return{
+
+        title:"Powder Solution",
+
+        text:
+`${mass} mg powder
+
+配置成
+
+${concentration} mg/mL
+
+需加入多少 mL？`,
+
+        answer:
+            mass/concentration,
+
+        unit:"mL"
+
+    };
+
+}
+
+function generateDrugDilutionQuestion(){
+
+    const stock=randomChoice([
+        10,
+        20,
+        50,
+        100
+    ]);
+
+    const target=randomChoice([
+        5,
+        10,
+        20,
+        50
+    ]);
+
+    const volume=randomChoice([
+        5,
+        10,
+        20
+    ]);
+
+    return{
+
+        title:"Drug Dilution",
+
+        text:
+`${stock} mM Stock
+
+↓
+
+${target} μM
+
+↓
+
+${volume} mL
+
+需要加入多少 μL？`,
+
+        answer:
+            volume*
+            target/
+            stock,
+
+        unit:"μL"
+
+    };
+
+}
+
+function generateStockQuestion(){
+
+    const stock=randomChoice([
+        100,
+        200,
+        500,
+        1000
+    ]);
+
+    const target=randomChoice([
+        10,
+        20,
+        50
+    ]);
+
+    const volume=randomChoice([
+        10,
+        20,
+        50
+    ]);
+
+    return{
+
+        title:"Stock Solution",
+
+        text:
+`${stock} μM
+
+↓
+
+${target} μM
+
+↓
+
+${volume} mL
+
+需要加入多少 mL Stock？`,
+
+        answer:
+            volume*
+            target/
+            stock,
+
+        unit:"mL"
+
+    };
+
+}
+
+
 const TrainingGames={
   mount(ctx){
     const map={
