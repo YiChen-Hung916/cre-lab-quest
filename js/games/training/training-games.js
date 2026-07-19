@@ -2187,56 +2187,22 @@ const TrainingGames={
 },
   
   equipment(ctx){
-    const events=[
-      {
-        title:"Vortex 混合",
-        text:"Sample 需充分混合，但不可產生大量氣泡。",
-        opts:[
-          "混合 1 秒",
-          "混合 5 秒",
-          "持續混合 30 秒"
-        ],
-        good:1,
-        fail:"Wrong mixing time"
-      },
-      {
-        title:"Incubator 設定",
-        text:"請為哺乳類細胞設定培養條件。",
-        opts:[
-          "25°C／0% CO₂",
-          "37°C／5% CO₂",
-          "42°C／10% CO₂"
-        ],
-        good:1,
-        fail:"Wrong incubation condition"
-      },
-      {
-        title:"設備工作站",
-        text:"請選擇正確流程處理細胞樣本。",
-        opts:[
-          "顯微鏡 → Vortex → Incubator",
-          "Vortex → Centrifuge → Microscope",
-          "Centrifuge → 烘箱 → Freezer"
-        ],
-        good:1,
-        fail:"Wrong equipment sequence"
-      }
-    ];
+  const question=getQuestion(
+    ctx.config.level
+  );
 
-    const event=
-      events[
-        (
-          ctx.config.roundIndex-1
-        )%events.length
-      ];
-
+  /*
+   * Level 12、13：
+   * 題庫選擇題
+   */
+  if(question.options){
     ctx.stage.innerHTML=this.shell(
-      event.title,
-      event.text,
+      question.title,
+      question.text,
       `
         <div class="event-card">
           <div class="event-options">
-            ${event.opts.map(
+            ${question.options.map(
               (option,index)=>`
                 <button
                   type="button"
@@ -2259,18 +2225,18 @@ const TrainingGames={
 
     buttons.forEach(button=>{
       button.onclick=()=>{
-        /*
-         * 第一次作答後立即鎖定全部選項，
-         * 不允許重複猜答案。
-         */
         buttons.forEach(item=>{
           item.disabled=true;
         });
 
-        const correct=
+        const selectedIndex=
           Number(
             button.dataset.i
-          )===event.good;
+          );
+
+        const correct=
+          selectedIndex===
+          question.answer;
 
         button.classList.add(
           correct
@@ -2280,7 +2246,9 @@ const TrainingGames={
 
         if(!correct){
           const correctButton=
-            buttons[event.good];
+            buttons[
+              question.answer
+            ];
 
           if(correctButton){
             correctButton.classList.add(
@@ -2291,14 +2259,14 @@ const TrainingGames={
           ctx.penalize(
             "accuracy",
             35,
-            "題目回答錯誤，已扣分並繼續下一回合。"
+            "題目回答錯誤，已顯示正確答案。"
           );
 
           setTimeout(
             ()=>{
               this.finishRound(
                 ctx,
-                [event.fail]
+                ["Wrong answer"]
               );
             },
             650
@@ -2318,8 +2286,208 @@ const TrainingGames={
         );
       };
     });
-  },
 
+    return;
+  }
+
+  /*
+   * Level 14：
+   * 計算題
+   */
+  const correctNumber=
+    Number(
+      question.correct
+    );
+
+  const decimals=
+    Number.isInteger(
+      correctNumber
+    )
+      ?0
+      :2;
+
+  const displayNumber=value=>{
+    const rounded=
+      Number(
+        Number(value).toFixed(
+          decimals
+        )
+      );
+
+    return String(
+      rounded
+    );
+  };
+
+  const distractorSet=
+    new Set();
+
+  const multipliers=[
+    0.5,
+    0.8,
+    1.2,
+    1.5,
+    2,
+    10
+  ];
+
+  shuffle(multipliers).forEach(
+    multiplier=>{
+      if(distractorSet.size>=3){
+        return;
+      }
+
+      const candidate=
+        Number(
+          (
+            correctNumber*
+            multiplier
+          ).toFixed(
+            decimals
+          )
+        );
+
+      if(
+        candidate>0&&
+        candidate!==correctNumber
+      ){
+        distractorSet.add(
+          candidate
+        );
+      }
+    }
+  );
+
+  while(distractorSet.size<3){
+    const offset=
+      randomInt(
+        1,
+        5
+      );
+
+    const candidate=
+      Number(
+        (
+          correctNumber+
+          offset
+        ).toFixed(
+          decimals
+        )
+      );
+
+    if(
+      candidate>0&&
+      candidate!==correctNumber
+    ){
+      distractorSet.add(
+        candidate
+      );
+    }
+  }
+
+  const options=
+    shuffle([
+      correctNumber,
+      ...distractorSet
+    ]);
+
+  const answerIndex=
+    options.findIndex(
+      value=>
+        value===correctNumber
+    );
+
+  ctx.stage.innerHTML=this.shell(
+    question.title,
+    question.text,
+    `
+      <div class="event-card">
+        <div class="event-options">
+          ${options.map(
+            (option,index)=>`
+              <button
+                type="button"
+                data-i="${index}"
+              >
+                ${displayNumber(option)}
+              </button>
+            `
+          ).join("")}
+        </div>
+      </div>
+    `
+  );
+
+  const buttons=[
+    ...ctx.stage.querySelectorAll(
+      ".event-options button"
+    )
+  ];
+
+  buttons.forEach(button=>{
+    button.onclick=()=>{
+      buttons.forEach(item=>{
+        item.disabled=true;
+      });
+
+      const selectedIndex=
+        Number(
+          button.dataset.i
+        );
+
+      const correct=
+        selectedIndex===
+        answerIndex;
+
+      button.classList.add(
+        correct
+          ?"answer-correct"
+          :"answer-wrong"
+      );
+
+      if(!correct){
+        const correctButton=
+          buttons[
+            answerIndex
+          ];
+
+        if(correctButton){
+          correctButton.classList.add(
+            "answer-correct"
+          );
+        }
+
+        ctx.penalize(
+          "accuracy",
+          35,
+          `計算錯誤，正確答案為 ${displayNumber(correctNumber)}。`
+        );
+
+        setTimeout(
+          ()=>{
+            this.finishRound(
+              ctx,
+              ["Wrong calculation"]
+            );
+          },
+          650
+        );
+
+        return;
+      }
+
+      setTimeout(
+        ()=>{
+          this.finishRound(
+            ctx,
+            []
+          );
+        },
+        450
+      );
+    };
+  });
+},
   plate(ctx){
     const targetCount=
       3+
