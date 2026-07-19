@@ -20,6 +20,30 @@ const TRAINING_META={
  * Level14
  *   Solution Preparation
  ******************************************************************************/
+const STORAGE_OPTIONS=[
+"Room Temperature",
+"4°C",
+"-20°C",
+"-80°C",
+"Liquid Nitrogen"
+];
+const MCQ_OPTIONS={
+
+storage:[
+    "Room Temperature",
+    "4°C",
+    "-20°C",
+    "-80°C",
+    "Liquid Nitrogen"
+],
+
+yesno:[
+    "Yes",
+    "No"
+]
+
+};
+
 
 const QUESTION_BANK={
 
@@ -457,29 +481,6 @@ answer:0
 
 };
 
-const STORAGE_OPTIONS=[
-"Room Temperature",
-"4°C",
-"-20°C",
-"-80°C",
-"Liquid Nitrogen"
-];
-const MCQ_OPTIONS={
-
-storage:[
-    "Room Temperature",
-    "4°C",
-    "-20°C",
-    "-80°C",
-    "Liquid Nitrogen"
-],
-
-yesno:[
-    "Yes",
-    "No"
-]
-
-};
 function randomChoice(arr){
     return arr[
         Math.floor(
