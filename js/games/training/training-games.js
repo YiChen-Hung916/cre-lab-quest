@@ -5,6 +5,7 @@ const TRAINING_META={
   equipment:{name:"Lab Knowledge",icon:"🧠"},
   plate:{name:"96-Well Plate",icon:"▦"},
   microscope:{name:"Microscope Focus",icon:"🔬"},
+  boss20:{name:"Complete Medium Mission",icon:"🧬"},
   labInspection:{name:"Lab Safety Inspection",icon:"⚠️"}
 };
 
@@ -806,6 +807,7 @@ const TrainingGames={
       equipment:this.equipment,
       plate:this.plate,
       microscope:this.microscope,
+      boss20:this.boss20,
       labInspection:this.labInspection
     };
 
@@ -879,6 +881,13 @@ const TrainingGames={
      */
     if(level<=19){
         return 3;
+    }
+
+    /*
+    * Level 20 Boss Mission
+    */
+    if(level===20){
+    return 5;
     }
 
     return 1;
@@ -2646,6 +2655,1377 @@ const TrainingGames={
     };
   },
 
+  boss20(ctx){
+  const round=Number(
+    ctx.config.roundIndex||1
+  );
+
+  const roundMap={
+    1:this.boss20Preparation,
+    2:this.boss20Pipette,
+    3:this.boss20Centrifuge,
+    4:this.boss20Label,
+    5:this.boss20Inspection
+  };
+
+  const game=
+    roundMap[round]||
+    this.boss20Preparation;
+
+  game.call(
+    this,
+    ctx
+  );
+},
+
+boss20Preparation(ctx){
+  const required=[
+    "DMEM",
+    "FBS",
+    "Pen/Strep"
+  ];
+
+  const selected=
+    new Set();
+
+  const values={
+    DMEM:445,
+    FBS:50,
+    "Pen/Strep":5
+  };
+
+  ctx.stage.innerHTML=this.shell(
+    "Boss Mission：Complete DMEM",
+    "請選擇正確試劑，並計算配製 500 mL Complete DMEM 所需的體積。",
+    `
+      <div class="boss-mission-card">
+        <div class="boss-formula">
+          <strong>目標配方</strong>
+
+          <p>
+            Final volume：500 mL
+          </p>
+
+          <p>
+            FBS：10%
+          </p>
+
+          <p>
+            Pen/Strep：1%
+          </p>
+        </div>
+
+        <div class="boss-preparation-layout">
+          <div class="boss-reagent-bank">
+            <span class="kicker">
+              試劑區
+            </span>
+
+            ${[
+              "DMEM",
+              "FBS",
+              "Pen/Strep",
+              "PBS",
+              "Trypsin"
+            ].map(name=>`
+              <button
+                type="button"
+                class="boss-reagent"
+                draggable="true"
+                data-reagent="${name}"
+              >
+                ${name}
+              </button>
+            `).join("")}
+          </div>
+
+          <div
+            id="mediumBottle"
+            class="boss-medium-bottle"
+          >
+            <strong>
+              500 mL Complete DMEM
+            </strong>
+
+            <span>
+              將需要的試劑拖入此處
+            </span>
+
+            <div id="selectedReagents"></div>
+          </div>
+        </div>
+
+        <div class="boss-volume-grid">
+          <label>
+            DMEM
+
+            <span>
+              <input
+                type="number"
+                id="volumeDMEM"
+                min="0"
+                step="1"
+              >
+              mL
+            </span>
+          </label>
+
+          <label>
+            FBS
+
+            <span>
+              <input
+                type="number"
+                id="volumeFBS"
+                min="0"
+                step="1"
+              >
+              mL
+            </span>
+          </label>
+
+          <label>
+            Pen/Strep
+
+            <span>
+              <input
+                type="number"
+                id="volumePenStrep"
+                min="0"
+                step="1"
+              >
+              mL
+            </span>
+          </label>
+        </div>
+
+        <div class="controls">
+          <button
+            type="button"
+            id="checkPreparation"
+            class="btn btn-primary btn-large"
+          >
+            確認配方
+          </button>
+        </div>
+      </div>
+    `
+  );
+
+  const stage=ctx.stage;
+
+  const bottle=
+    stage.querySelector(
+      "#mediumBottle"
+    );
+
+  const selectedBox=
+    stage.querySelector(
+      "#selectedReagents"
+    );
+
+  const updateSelected=()=>{
+    selectedBox.innerHTML=
+      [...selected]
+        .map(name=>`
+          <span class="boss-selected-reagent">
+            ${name}
+          </span>
+        `)
+        .join("");
+  };
+
+  const addReagent=name=>{
+    if(selected.has(name)){
+      return;
+    }
+
+    selected.add(name);
+    updateSelected();
+  };
+
+  stage
+    .querySelectorAll(
+      ".boss-reagent"
+    )
+    .forEach(button=>{
+      button.addEventListener(
+        "dragstart",
+        event=>{
+          event.dataTransfer.setData(
+            "text/plain",
+            button.dataset.reagent
+          );
+        }
+      );
+
+      /*
+       * 手機點擊備援。
+       */
+      button.addEventListener(
+        "click",
+        ()=>{
+          addReagent(
+            button.dataset.reagent
+          );
+
+          button.classList.add(
+            "selected"
+          );
+        }
+      );
+    });
+
+  bottle.addEventListener(
+    "dragover",
+    event=>{
+      event.preventDefault();
+      bottle.classList.add(
+        "drag-over"
+      );
+    }
+  );
+
+  bottle.addEventListener(
+    "dragleave",
+    ()=>{
+      bottle.classList.remove(
+        "drag-over"
+      );
+    }
+  );
+
+  bottle.addEventListener(
+    "drop",
+    event=>{
+      event.preventDefault();
+
+      bottle.classList.remove(
+        "drag-over"
+      );
+
+      const reagent=
+        event.dataTransfer.getData(
+          "text/plain"
+        );
+
+      addReagent(reagent);
+    }
+  );
+
+  stage.querySelector(
+    "#checkPreparation"
+  ).onclick=()=>{
+    const issues=[];
+
+    required.forEach(name=>{
+      if(!selected.has(name)){
+        ctx.penalize(
+          "accuracy",
+          10,
+          `缺少必要試劑：${name}`
+        );
+
+        issues.push(
+          `Missing ${name}`
+        );
+      }
+    });
+
+    [...selected].forEach(name=>{
+      if(!required.includes(name)){
+        ctx.penalize(
+          "sampleQuality",
+          14,
+          `${name} 不屬於此 Complete DMEM 配方。`
+        );
+
+        issues.push(
+          `Wrong reagent: ${name}`
+        );
+      }
+    });
+
+    const answers={
+      DMEM:Number(
+        stage.querySelector(
+          "#volumeDMEM"
+        ).value
+      ),
+
+      FBS:Number(
+        stage.querySelector(
+          "#volumeFBS"
+        ).value
+      ),
+
+      "Pen/Strep":Number(
+        stage.querySelector(
+          "#volumePenStrep"
+        ).value
+      )
+    };
+
+    Object.entries(
+      values
+    ).forEach(
+      ([name,correct])=>{
+        if(
+          answers[name]!==correct
+        ){
+          ctx.penalize(
+            "accuracy",
+            12,
+            `${name} 體積計算錯誤。`
+          );
+
+          issues.push(
+            `Wrong ${name} volume`
+          );
+        }
+      }
+    );
+
+    this.finishRound(
+      ctx,
+      issues
+    );
+  };
+},
+
+boss20Pipette(ctx){
+  const tasks=[
+    {
+      reagent:"Pen/Strep",
+      amount:5,
+      unit:"mL",
+      tool:"P1000",
+      pipetteVolume:1000,
+      repetitions:5
+    },
+    {
+      reagent:"FBS",
+      amount:50,
+      unit:"mL",
+      tool:"Serological",
+      pipetteVolume:10,
+      repetitions:5
+    }
+  ];
+
+  const task=
+    tasks[
+      Math.floor(
+        Math.random()*
+        tasks.length
+      )
+    ];
+
+  let selectedReagent=null;
+  let selectedTool=null;
+  let tipInstalled=false;
+
+  ctx.stage.innerHTML=this.shell(
+    "Medium Preparation：Liquid Transfer",
+    `請將正確試劑加入 Complete DMEM。目標加入量為 ${task.amount} ${task.unit}，請自行選擇工具並設定每次吸取量。`,
+    `
+      <div class="boss-transfer-layout">
+        <div class="boss-reagent-bank">
+          <span class="kicker">
+            試劑
+          </span>
+
+          ${[
+            "DMEM",
+            "FBS",
+            "Pen/Strep",
+            "PBS",
+            "Trypsin"
+          ].map(name=>`
+            <button
+              type="button"
+              class="boss-transfer-reagent"
+              data-reagent="${name}"
+            >
+              ${name}
+            </button>
+          `).join("")}
+        </div>
+
+        <div class="boss-tool-bank">
+          <span class="kicker">
+            移液工具
+          </span>
+
+          ${[
+            "P20",
+            "P200",
+            "P1000",
+            "Serological"
+          ].map(name=>`
+            <button
+              type="button"
+              class="boss-transfer-tool"
+              data-tool="${name}"
+            >
+              ${name}
+            </button>
+          `).join("")}
+        </div>
+
+        <div class="boss-transfer-controls">
+          <label>
+            每次吸取量
+
+            <span>
+              <input
+                type="number"
+                id="bossTransferVolume"
+                min="0"
+                step="0.1"
+              >
+
+              <select id="bossTransferUnit">
+                <option value="uL">
+                  μL
+                </option>
+
+                <option value="mL">
+                  mL
+                </option>
+              </select>
+            </span>
+          </label>
+
+          <label>
+            吸取次數
+
+            <input
+              type="number"
+              id="bossTransferCount"
+              min="1"
+              step="1"
+            >
+          </label>
+
+          <button
+            type="button"
+            id="bossInstallTip"
+            class="btn btn-soft"
+          >
+            安裝新 Tip
+          </button>
+
+          <button
+            type="button"
+            id="bossTransferConfirm"
+            class="btn btn-primary"
+          >
+            執行轉移
+          </button>
+        </div>
+      </div>
+    `
+  );
+
+  const stage=ctx.stage;
+
+  stage
+    .querySelectorAll(
+      ".boss-transfer-reagent"
+    )
+    .forEach(button=>{
+      button.onclick=()=>{
+        stage
+          .querySelectorAll(
+            ".boss-transfer-reagent"
+          )
+          .forEach(item=>{
+            item.classList.remove(
+              "selected"
+            );
+          });
+
+        button.classList.add(
+          "selected"
+        );
+
+        selectedReagent=
+          button.dataset.reagent;
+      };
+    });
+
+  stage
+    .querySelectorAll(
+      ".boss-transfer-tool"
+    )
+    .forEach(button=>{
+      button.onclick=()=>{
+        stage
+          .querySelectorAll(
+            ".boss-transfer-tool"
+          )
+          .forEach(item=>{
+            item.classList.remove(
+              "selected"
+            );
+          });
+
+        button.classList.add(
+          "selected"
+        );
+
+        selectedTool=
+          button.dataset.tool;
+      };
+    });
+
+  stage.querySelector(
+    "#bossInstallTip"
+  ).onclick=event=>{
+    tipInstalled=true;
+
+    event.currentTarget.textContent=
+      "Tip 已安裝";
+
+    event.currentTarget.disabled=true;
+  };
+
+  stage.querySelector(
+    "#bossTransferConfirm"
+  ).onclick=()=>{
+    const issues=[];
+
+    const volume=Number(
+      stage.querySelector(
+        "#bossTransferVolume"
+      ).value
+    );
+
+    const unit=
+      stage.querySelector(
+        "#bossTransferUnit"
+      ).value;
+
+    const count=Number(
+      stage.querySelector(
+        "#bossTransferCount"
+      ).value
+    );
+
+    if(
+      selectedReagent!==
+      task.reagent
+    ){
+      ctx.penalize(
+        "accuracy",
+        24,
+        `應選擇 ${task.reagent}。`
+      );
+
+      issues.push(
+        "Wrong reagent"
+      );
+    }
+
+    if(
+      selectedTool!==
+      task.tool
+    ){
+      ctx.penalize(
+        "accuracy",
+        18,
+        `此任務建議使用 ${task.tool}。`
+      );
+
+      issues.push(
+        "Wrong transfer tool"
+      );
+    }
+
+    if(
+      selectedTool!==
+      "Serological"&&
+      !tipInstalled
+    ){
+      ctx.penalize(
+        "safety",
+        24,
+        "Micropipette 使用前必須安裝新的 Tip。"
+      );
+
+      issues.push(
+        "Tip not installed"
+      );
+    }
+
+    const expectedUnit=
+      task.tool==="Serological"
+        ?"mL"
+        :"uL";
+
+    if(
+      volume!==
+        task.pipetteVolume||
+      count!==
+        task.repetitions||
+      unit!==
+        expectedUnit
+    ){
+      ctx.penalize(
+        "accuracy",
+        25,
+        "每次吸取量或吸取次數計算錯誤。"
+      );
+
+      issues.push(
+        "Wrong transfer calculation"
+      );
+    }
+
+    this.finishRound(
+      ctx,
+      issues
+    );
+  };
+},
+
+boss20Centrifuge(ctx){
+  const holes=8;
+
+  const tubes=[
+    {
+      id:1,
+      volume:500
+    },
+    {
+      id:2,
+      volume:500
+    },
+    {
+      id:3,
+      volume:300
+    },
+    {
+      id:4,
+      volume:300
+    }
+  ];
+
+  const placements={};
+  let selectedTube=null;
+
+  const targetSpeed=1500;
+  const targetTime=5;
+
+  const holesHtml=
+    Array.from(
+      {length:holes},
+      (_,index)=>{
+        const angle=
+          Math.PI*
+          2*
+          index/
+          holes-
+          Math.PI/2;
+
+        const left=
+          50+
+          Math.cos(angle)*
+          39;
+
+        const top=
+          50+
+          Math.sin(angle)*
+          39;
+
+        return `
+          <button
+            type="button"
+            class="rotor-hole"
+            data-hole="${index}"
+            style="
+              left:${left}%;
+              top:${top}%;
+              transform:
+                translate(-50%,-50%)
+                rotate(${index*45+90}deg);
+            "
+          >
+            <span
+              style="
+                transform:
+                  rotate(-${index*45+90}deg);
+              "
+            >
+              ${index+1}
+            </span>
+          </button>
+        `;
+      }
+    ).join("");
+
+  ctx.stage.innerHTML=this.shell(
+    "Quality Control：Centrifuge",
+    "將四支 sample tube 正確配平，並設定 1500 ×g、5分鐘。",
+    `
+      <div class="centrifuge-wrap">
+        <div
+          class="rotor rotor-8"
+          id="bossRotor"
+        >
+          ${holesHtml}
+        </div>
+
+        <div class="tube-bank">
+          ${tubes.map(tube=>`
+            <button
+              type="button"
+              class="tube-token"
+              data-tube="${tube.id}"
+              data-volume="${tube.volume}"
+            >
+              <strong>
+                Tube ${tube.id}
+              </strong>
+
+              <span>
+                ${tube.volume} μL
+              </span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+
+      <div class="parameter-grid">
+        <label>
+          離心力
+
+          <strong>
+            <span id="bossGText">
+              500
+            </span>
+            ×g
+          </strong>
+
+          <input
+            type="range"
+            id="bossGForce"
+            min="500"
+            max="3000"
+            step="500"
+            value="500"
+          >
+        </label>
+
+        <label>
+          時間
+
+          <strong id="bossTimeText">
+            1 min
+          </strong>
+
+          <input
+            type="range"
+            id="bossSpinTime"
+            min="1"
+            max="10"
+            step="1"
+            value="1"
+          >
+        </label>
+      </div>
+
+      <div class="controls">
+        <button
+          type="button"
+          id="bossSpinButton"
+          class="btn btn-primary btn-large"
+        >
+          啟動離心機
+        </button>
+      </div>
+    `
+  );
+
+  const stage=ctx.stage;
+
+  const rotor=
+    stage.querySelector(
+      "#bossRotor"
+    );
+
+  const gForce=
+    stage.querySelector(
+      "#bossGForce"
+    );
+
+  const spinTime=
+    stage.querySelector(
+      "#bossSpinTime"
+    );
+
+  gForce.oninput=()=>{
+    stage.querySelector(
+      "#bossGText"
+    ).textContent=
+      gForce.value;
+  };
+
+  spinTime.oninput=()=>{
+    stage.querySelector(
+      "#bossTimeText"
+    ).textContent=
+      `${spinTime.value} min`;
+  };
+
+  stage
+    .querySelectorAll(
+      ".tube-token"
+    )
+    .forEach(button=>{
+      button.onclick=()=>{
+        if(button.disabled){
+          return;
+        }
+
+        stage
+          .querySelectorAll(
+            ".tube-token"
+          )
+          .forEach(item=>{
+            item.classList.remove(
+              "selected"
+            );
+          });
+
+        button.classList.add(
+          "selected"
+        );
+
+        selectedTube=button;
+      };
+    });
+
+  stage
+    .querySelectorAll(
+      ".rotor-hole"
+    )
+    .forEach(hole=>{
+      hole.onclick=()=>{
+        if(
+          !selectedTube||
+          hole.classList.contains(
+            "filled"
+          )
+        ){
+          return;
+        }
+
+        const position=Number(
+          hole.dataset.hole
+        );
+
+        const tubeId=Number(
+          selectedTube.dataset.tube
+        );
+
+        const volume=Number(
+          selectedTube.dataset.volume
+        );
+
+        placements[position]={
+          tubeId,
+          volume
+        };
+
+        hole.classList.add(
+          "filled"
+        );
+
+        hole.innerHTML=`
+          <strong>
+            ${tubeId}
+          </strong>
+        `;
+
+        selectedTube.disabled=true;
+
+        selectedTube.classList.remove(
+          "selected"
+        );
+
+        selectedTube=null;
+      };
+    });
+
+  stage.querySelector(
+    "#bossSpinButton"
+  ).onclick=()=>{
+    const positions=
+      Object.keys(
+        placements
+      ).map(Number);
+
+    if(
+      positions.length!==
+      tubes.length
+    ){
+      ctx.penalize(
+        "safety",
+        12,
+        "尚有離心管未放入 rotor。"
+      );
+
+      return;
+    }
+
+    const issues=[];
+
+    const balanced=
+      positions.every(position=>{
+        const opposite=
+          (
+            position+
+            holes/2
+          )%holes;
+
+        return Boolean(
+          placements[opposite]&&
+          placements[position].volume===
+          placements[opposite].volume
+        );
+      });
+
+    if(!balanced){
+      ctx.penalize(
+        "safety",
+        45,
+        "離心機未正確配平。"
+      );
+
+      issues.push(
+        "Centrifuge not balanced"
+      );
+    }
+
+    if(
+      Number(gForce.value)!==
+      targetSpeed
+    ){
+      ctx.penalize(
+        "sampleQuality",
+        16,
+        "離心力設定錯誤。"
+      );
+
+      issues.push(
+        "Wrong centrifuge force"
+      );
+    }
+
+    if(
+      Number(spinTime.value)!==
+      targetTime
+    ){
+      ctx.penalize(
+        "sampleQuality",
+        16,
+        "離心時間設定錯誤。"
+      );
+
+      issues.push(
+        "Wrong centrifuge time"
+      );
+    }
+
+    rotor.classList.add(
+      "spinning"
+    );
+
+    setTimeout(
+      ()=>{
+        rotor.classList.remove(
+          "spinning"
+        );
+
+        this.finishRound(
+          ctx,
+          issues
+        );
+      },
+      1200
+    );
+  };
+},
+
+boss20Label(ctx){
+  const correctItems=[
+    "Complete DMEM",
+    "Preparation Date",
+    "Operator Initials",
+    "4°C"
+  ];
+
+  const selected=
+    new Set();
+
+  ctx.stage.innerHTML=this.shell(
+    "Label and Storage",
+    "完成培養基標示，並選擇正確保存條件。",
+    `
+      <div class="boss-label-layout">
+        <div class="boss-label-bank">
+          ${[
+            "Complete DMEM",
+            "Preparation Date",
+            "Operator Initials",
+            "4°C",
+            "-20°C",
+            "PBS",
+            "No Label Needed"
+          ].map(item=>`
+            <button
+              type="button"
+              class="boss-label-option"
+              data-label="${item}"
+            >
+              ${item}
+            </button>
+          `).join("")}
+        </div>
+
+        <div class="boss-label-preview">
+          <strong>
+            Medium Bottle Label
+          </strong>
+
+          <div id="bossLabelSelected"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button
+          type="button"
+          id="bossLabelConfirm"
+          class="btn btn-primary btn-large"
+        >
+          完成標示並存放
+        </button>
+      </div>
+    `
+  );
+
+  const stage=ctx.stage;
+
+  const preview=
+    stage.querySelector(
+      "#bossLabelSelected"
+    );
+
+  const update=()=>{
+    preview.innerHTML=
+      [...selected]
+        .map(item=>`
+          <span class="boss-label-tag">
+            ${item}
+          </span>
+        `)
+        .join("");
+  };
+
+  stage
+    .querySelectorAll(
+      ".boss-label-option"
+    )
+    .forEach(button=>{
+      button.onclick=()=>{
+        const item=
+          button.dataset.label;
+
+        if(selected.has(item)){
+          selected.delete(item);
+
+          button.classList.remove(
+            "selected"
+          );
+        }else{
+          selected.add(item);
+
+          button.classList.add(
+            "selected"
+          );
+        }
+
+        update();
+      };
+    });
+
+  stage.querySelector(
+    "#bossLabelConfirm"
+  ).onclick=()=>{
+    const issues=[];
+
+    correctItems.forEach(item=>{
+      if(!selected.has(item)){
+        ctx.penalize(
+          "sampleQuality",
+          10,
+          `標籤缺少：${item}`
+        );
+
+        issues.push(
+          `Missing label: ${item}`
+        );
+      }
+    });
+
+    [...selected].forEach(item=>{
+      if(!correctItems.includes(item)){
+        ctx.penalize(
+          "accuracy",
+          10,
+          `不正確的標示或保存方式：${item}`
+        );
+
+        issues.push(
+          `Wrong label: ${item}`
+        );
+      }
+    });
+
+    this.finishRound(
+      ctx,
+      issues
+    );
+  };
+},
+
+boss20Inspection(ctx){
+  const allErrors=[
+    {
+      id:"pipette",
+      zone:"Laboratory Bench",
+      label:"Micropipette",
+      message:"Pipette 未垂直歸位"
+    },
+    {
+      id:"usedTip",
+      zone:"Laboratory Bench",
+      label:"Used Tip",
+      message:"Pipette 上仍裝有使用過的 Tip"
+    },
+    {
+      id:"ethanol",
+      zone:"Laboratory Bench",
+      label:"Ethanol Bottle",
+      message:"Ethanol 瓶蓋未關閉"
+    },
+    {
+      id:"reagent",
+      zone:"Laboratory Bench",
+      label:"FBS Bottle",
+      message:"需冷藏的試劑留在桌上"
+    },
+    {
+      id:"incubator",
+      zone:"Equipment Area",
+      label:"Incubator",
+      message:"Incubator 門未關閉"
+    },
+    {
+      id:"centrifuge",
+      zone:"Equipment Area",
+      label:"Centrifuge",
+      message:"Centrifuge 蓋子未關閉"
+    },
+    {
+      id:"uv",
+      zone:"Biosafety Cabinet",
+      label:"UV Lamp",
+      message:"人員離開時 UV 狀態不正確"
+    },
+    {
+      id:"waste",
+      zone:"Biosafety Cabinet",
+      label:"Biohazard Waste",
+      message:"Biohazard waste 已滿"
+    }
+  ];
+
+  const activeErrors=
+    shuffle(
+      allErrors
+    ).slice(
+      0,
+      3
+    );
+
+  const activeIds=
+    new Set(
+      activeErrors.map(
+        error=>error.id
+      )
+    );
+
+  const zones=[
+    "Biosafety Cabinet",
+    "Laboratory Bench",
+    "Equipment Area"
+  ];
+
+  const objects=[
+    ...activeErrors,
+
+    {
+      id:"cleanDish",
+      zone:"Biosafety Cabinet",
+      label:"Clean Culture Dish"
+    },
+    {
+      id:"tubeRack",
+      zone:"Laboratory Bench",
+      label:"Tube Rack"
+    },
+    {
+      id:"freezer",
+      zone:"Equipment Area",
+      label:"Freezer"
+    }
+  ];
+
+  const found=
+    new Set();
+
+  ctx.stage.innerHTML=this.shell(
+    "Final Lab Inspection",
+    "實驗完成。離開實驗室前，請找出畫面中的 3 個錯誤。",
+    `
+      <div class="inspection-scene">
+        ${zones.map(zone=>`
+          <section class="inspection-zone">
+            <strong>
+              ${zone}
+            </strong>
+
+            ${shuffle(
+              objects.filter(
+                item=>
+                  item.zone===zone
+              )
+            ).map(item=>`
+              <button
+                type="button"
+                class="lab-object"
+                data-object="${item.id}"
+              >
+                <span>
+                  ${item.label}
+                </span>
+              </button>
+            `).join("")}
+          </section>
+        `).join("")}
+      </div>
+
+      <div class="inspection-footer">
+        <strong>
+          Found
+          <span id="bossInspectionCount">
+            0
+          </span>
+          / 3
+        </strong>
+
+        <button
+          type="button"
+          id="bossInspectionFinish"
+          class="btn btn-primary btn-large"
+        >
+          完成巡查
+        </button>
+      </div>
+    `
+  );
+
+  const stage=ctx.stage;
+
+  stage
+    .querySelectorAll(
+      ".lab-object"
+    )
+    .forEach(button=>{
+      button.onclick=()=>{
+        const id=
+          button.dataset.object;
+
+        if(found.has(id)){
+          return;
+        }
+
+        if(activeIds.has(id)){
+          found.add(id);
+
+          button.classList.add(
+            "found-error"
+          );
+
+          const error=
+            activeErrors.find(
+              item=>item.id===id
+            );
+
+          button.innerHTML=`
+            <span>
+              ✓ ${error.message}
+            </span>
+          `;
+
+          stage.querySelector(
+            "#bossInspectionCount"
+          ).textContent=
+            found.size;
+        }else{
+          button.classList.add(
+            "wrong"
+          );
+
+          ctx.penalize(
+            "accuracy",
+            8,
+            "這個項目目前沒有異常。"
+          );
+        }
+      };
+    });
+
+  stage.querySelector(
+    "#bossInspectionFinish"
+  ).onclick=()=>{
+    const issues=[];
+
+    activeErrors.forEach(error=>{
+      if(!found.has(error.id)){
+        ctx.penalize(
+          "safety",
+          16,
+          `未發現：${error.message}`
+        );
+
+        issues.push(
+          error.message
+        );
+      }
+    });
+
+    this.finishRound(
+      ctx,
+      issues
+    );
+  };
+},
+  
+  
   labInspection(ctx){
     const level=Number(ctx.config.level);
     const scenes={
