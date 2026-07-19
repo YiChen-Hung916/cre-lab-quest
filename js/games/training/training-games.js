@@ -2655,14 +2655,355 @@ const TrainingGames={
     };
   },
 
-  boss20(ctx){
-  const round=Number(
-    ctx.config.roundIndex||1
+
+/******************************************************************************
+ * LEVEL 20 BOSS
+ *
+ * Round 1：Prepare Complete DMEM
+ * Round 2：Aliquot Complete DMEM
+ * Round 3：Centrifuge Balance
+ * Round 4：Label and Storage
+ * Round 5：原本的 Lab Inspection
+ ******************************************************************************/
+
+/*
+ * 建立本次 Boss 20 共用任務。
+ *
+ * totalVolume：
+ * 100–1000 mL，每 10 mL 一個可能值。
+ *
+ * 為了讓 Round 3 一定可以成對配平，
+ * aliquots 會由 2–4 組相同容量的管子組成。
+ */
+createBoss20State(){
+
+  const totalVolume=
+    randomInt(
+      10,
+      100
+    )*10;
+
+  const roundNumber=value=>
+    Number(
+      Number(value).toFixed(2)
+    );
+
+  const formula={
+    DMEM:roundNumber(
+      totalVolume*.89
+    ),
+
+    FBS:roundNumber(
+      totalVolume*.10
+    ),
+
+    "Pen/Strep":roundNumber(
+      totalVolume*.01
+    ),
+
+    PBS:0,
+    Trypsin:0
+  };
+
+  /*
+   * Round 3 使用 8-hole rotor，
+   * 因此最多安排四對 tube。
+   *
+   * 每一對的兩支 tube 容量相同，
+   * 所有 tube 容量總和等於 totalVolume。
+   */
+  const halfVolume=
+    totalVolume/2;
+
+  let pairCount;
+
+  if(totalVolume<=250){
+    pairCount=1;
+  }else if(totalVolume<=500){
+    pairCount=2;
+  }else if(totalVolume<=750){
+    pairCount=3;
+  }else{
+    pairCount=4;
+  }
+
+  /*
+   * 將 halfVolume 隨機拆成 pairCount 份。
+   * 每一份會產生兩支相同容量的 tube。
+   */
+  const pairVolumes=[];
+  let remainingHalf=halfVolume;
+
+  for(
+    let index=0;
+    index<pairCount;
+    index++
+  ){
+    const pairsLeft=
+      pairCount-index;
+
+    if(pairsLeft===1){
+      pairVolumes.push(
+        roundNumber(
+          remainingHalf
+        )
+      );
+
+      break;
+    }
+
+    const minimumForRest=
+      (pairsLeft-1)*10;
+
+    const maximumCurrent=
+      remainingHalf-
+      minimumForRest;
+
+    const minimumCurrent=10;
+
+    const possibleSteps=
+      Math.max(
+        1,
+        Math.floor(
+          (
+            maximumCurrent-
+            minimumCurrent
+          )/5
+        )+1
+      );
+
+    const currentVolume=
+      minimumCurrent+
+      randomInt(
+        0,
+        possibleSteps-1
+      )*5;
+
+    pairVolumes.push(
+      roundNumber(
+        currentVolume
+      )
+    );
+
+    remainingHalf=
+      roundNumber(
+        remainingHalf-
+        currentVolume
+      );
+  }
+
+  /*
+   * 每個 pair 產生兩支相同容量的 tube。
+   */
+  const aliquots=[];
+
+  pairVolumes.forEach(
+    (volume,pairIndex)=>{
+      aliquots.push(
+        {
+          id:aliquots.length+1,
+          pair:pairIndex,
+          volume,
+          filled:false
+        },
+        {
+          id:aliquots.length+2,
+          pair:pairIndex,
+          volume,
+          filled:false
+        }
+      );
+    }
   );
+
+  /*
+   * 打亂 tube 顯示順序，
+   * 避免玩家只按照相鄰順序配平。
+   */
+  const shuffledAliquots=
+    shuffle(
+      aliquots
+    ).map(
+      (tube,index)=>({
+        ...tube,
+        displayOrder:index
+      })
+    );
+
+  return{
+    totalVolume,
+    formula,
+
+    /*
+     * Round 1
+     */
+    addedReagents:[],
+    preparationPassed:null,
+
+    /*
+     * Round 2
+     */
+    aliquots:shuffledAliquots,
+    bottleRemaining:totalVolume,
+    aliquotPassed:null,
+
+    /*
+     * Round 3
+     */
+    centrifugePassed:null,
+
+    /*
+     * Round 4
+     */
+    labelPassed:null
+  };
+},
+
+
+/*
+ * 共用的擬真培養基瓶 HTML。
+ */
+boss20BottleHtml(
+  state,
+  options={}
+){
+
+  const total=
+    Number(
+      state.totalVolume
+    )||1;
+
+  const currentVolume=
+    Number(
+      options.currentVolume ??
+      state.bottleRemaining ??
+      0
+    );
+
+  const fillPercent=
+    Math.max(
+      0,
+      Math.min(
+        100,
+        currentVolume/
+        total*
+        100
+      )
+    );
+
+  const showLabel=
+    Boolean(
+      options.showLabel
+    );
+
+  const labelHtml=
+    showLabel
+      ?`
+        <div class="boss20-bottle-label">
+          <strong>
+            Complete DMEM
+          </strong>
+
+          <span>
+            Total volume：
+            ${total} mL
+          </span>
+
+          <span>
+            10% FBS
+          </span>
+
+          <span>
+            1% Pen/Strep
+          </span>
+
+          <span>
+            Store at 4°C
+          </span>
+        </div>
+      `
+      :"";
+
+  return`
+    <div class="boss20-real-bottle">
+      <div class="boss20-bottle-cap"></div>
+
+      <div class="boss20-bottle-neck"></div>
+
+      <div class="boss20-bottle-body">
+        <div
+          class="boss20-bottle-liquid"
+          style="
+            height:${fillPercent}%;
+          "
+        ></div>
+
+        ${labelHtml}
+
+        <div class="boss20-bottle-volume">
+          <strong>
+            ${this.boss20DisplayNumber(currentVolume)}
+            mL
+          </strong>
+
+          <small>
+            of ${total} mL
+          </small>
+        </div>
+      </div>
+    </div>
+  `;
+},
+
+
+/*
+ * 顯示數字時移除多餘的小數點。
+ */
+boss20DisplayNumber(value){
+
+  const number=
+    Number(value);
+
+  if(Number.isInteger(number)){
+    return String(number);
+  }
+
+  return String(
+    Number(
+      number.toFixed(2)
+    )
+  );
+},
+
+
+boss20(ctx){
+
+  const round=
+    Number(
+      ctx.config.roundIndex||1
+    );
+
+  /*
+   * 每次重新開始 Level 20 時，
+   * 建立新的隨機任務。
+   */
+  if(
+    round===1||
+    !this._boss20State
+  ){
+    this._boss20State=
+      this.createBoss20State();
+  }
+
+  /*
+   * 將共用 state 傳入每個 Round。
+   */
+  ctx.boss20State=
+    this._boss20State;
 
   const roundMap={
     1:this.boss20Preparation,
-    2:this.boss20Pipette,
+    2:this.boss20Aliquot,
     3:this.boss20Centrifuge,
     4:this.boss20Label,
     5:this.boss20Inspection
@@ -2678,180 +3019,361 @@ const TrainingGames={
   );
 },
 
+
+/******************************************************************************
+ * ROUND 1
+ * Prepare Complete DMEM
+ ******************************************************************************/
 boss20Preparation(ctx){
-  const required=[
+
+  const state=
+    ctx.boss20State;
+
+  const total=
+    state.totalVolume;
+
+  const reagentNames=[
+    "DMEM",
+    "FBS",
+    "Pen/Strep",
+    "PBS",
+    "Trypsin"
+  ];
+
+  const requiredReagents=[
     "DMEM",
     "FBS",
     "Pen/Strep"
   ];
 
-  const selected=
-    new Set();
+  const wrongReagents=[
+    "PBS",
+    "Trypsin"
+  ];
 
-  const values={
-    DMEM:445,
-    FBS:50,
-    "Pen/Strep":5
+  /*
+   * 記錄玩家實際拖入瓶中的試劑。
+   * 同一試劑只能加入一次。
+   */
+  const added=
+    new Set(
+      state.addedReagents||[]
+    );
+
+  /*
+   * 計算目前視覺液面。
+   *
+   * 每個拖入的試劑：
+   * - 若輸入體積 > 0，使用該體積
+   * - 若輸入為 0，也至少顯示總容量的 5%
+   *
+   * 因此錯誤試劑拖入時，
+   * 液面同樣會上升。
+   */
+  const getVisualVolume=()=>{
+
+    let visualVolume=0;
+
+    added.forEach(name=>{
+
+      const input=
+        ctx.stage.querySelector(
+          `[data-volume-input="${name}"]`
+        );
+
+      const enteredVolume=
+        input
+          ?Number(input.value)
+          :0;
+
+      visualVolume+=
+        enteredVolume>0
+          ?enteredVolume
+          :total*.05;
+    });
+
+    return Math.min(
+      total,
+      visualVolume
+    );
   };
 
-  ctx.stage.innerHTML=this.shell(
-    "Boss Mission：Complete DMEM",
-    "請選擇正確試劑，並計算配製 500 mL Complete DMEM 所需的體積。",
-    `
-      <div class="boss-mission-card">
-        <div class="boss-formula">
-          <strong>目標配方</strong>
+  ctx.stage.innerHTML=
+    this.shell(
+      "Boss Mission：Prepare Complete DMEM",
 
-          <p>
-            Final volume：500 mL
-          </p>
+      `請配製 ${total} mL Complete DMEM。將試劑拖入培養基瓶，並在五個欄位中輸入各試劑體積；不需要加入的試劑必須輸入 0 mL。`,
 
-          <p>
-            FBS：10%
-          </p>
+      `
+        <div class="boss20-round1">
+          <div class="boss-formula">
+            <strong>
+              Target Formula
+            </strong>
 
-          <p>
-            Pen/Strep：1%
-          </p>
-        </div>
+            <p>
+              Final volume：
+              ${total} mL
+            </p>
 
-        <div class="boss-preparation-layout">
-          <div class="boss-reagent-bank">
-            <span class="kicker">
-              試劑區
-            </span>
+            <p>
+              FBS：10%
+            </p>
 
-            ${[
-              "DMEM",
-              "FBS",
-              "Pen/Strep",
-              "PBS",
-              "Trypsin"
-            ].map(name=>`
-              <button
-                type="button"
-                class="boss-reagent"
-                draggable="true"
-                data-reagent="${name}"
-              >
-                ${name}
-              </button>
-            `).join("")}
+            <p>
+              Pen/Strep：1%
+            </p>
+
+            <p>
+              DMEM：補足至 final volume
+            </p>
+          </div>
+
+          <div class="boss-preparation-layout">
+            <div class="boss-reagent-bank">
+              <span class="kicker">
+                Reagent Bank
+              </span>
+
+              ${reagentNames
+                .map(name=>`
+                  <button
+                    type="button"
+                    class="
+                      boss-reagent
+                      ${
+                        added.has(name)
+                          ?"selected"
+                          :""
+                      }
+                    "
+                    draggable="true"
+                    data-reagent="${name}"
+                  >
+                    ${name}
+                  </button>
+                `)
+                .join("")
+              }
+            </div>
+
+            <div
+              id="mediumBottle"
+              class="boss20-bottle-drop-zone"
+            >
+              <div id="boss20Round1Bottle">
+                ${this.boss20BottleHtml(
+                  state,
+                  {
+                    currentVolume:0
+                  }
+                )}
+              </div>
+
+              <strong>
+                Drag reagents into the bottle
+              </strong>
+
+              <div
+                id="selectedReagents"
+                class="boss20-recipe-log"
+              ></div>
+            </div>
+          </div>
+
+          <div class="boss-volume-grid boss-volume-grid-five">
+            ${reagentNames
+              .map(name=>`
+                <label>
+                  ${name}
+
+                  <span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value=""
+                      data-volume-input="${name}"
+                    >
+
+                    mL
+                  </span>
+                </label>
+              `)
+              .join("")
+            }
           </div>
 
           <div
-            id="mediumBottle"
-            class="boss-medium-bottle"
+            id="boss20PreparationMessage"
+            class="notice"
           >
-            <strong>
-              500 mL Complete DMEM
-            </strong>
+            請先輸入體積，再將試劑拖入培養基瓶。
+          </div>
 
-            <span>
-              將需要的試劑拖入此處
-            </span>
-
-            <div id="selectedReagents"></div>
+          <div class="controls">
+            <button
+              type="button"
+              id="checkPreparation"
+              class="btn btn-primary btn-large"
+            >
+              確認配方
+            </button>
           </div>
         </div>
+      `
+    );
 
-        <div class="boss-volume-grid">
-          <label>
-            DMEM
-
-            <span>
-              <input
-                type="number"
-                id="volumeDMEM"
-                min="0"
-                step="1"
-              >
-              mL
-            </span>
-          </label>
-
-          <label>
-            FBS
-
-            <span>
-              <input
-                type="number"
-                id="volumeFBS"
-                min="0"
-                step="1"
-              >
-              mL
-            </span>
-          </label>
-
-          <label>
-            Pen/Strep
-
-            <span>
-              <input
-                type="number"
-                id="volumePenStrep"
-                min="0"
-                step="1"
-              >
-              mL
-            </span>
-          </label>
-        </div>
-
-        <div class="controls">
-          <button
-            type="button"
-            id="checkPreparation"
-            class="btn btn-primary btn-large"
-          >
-            確認配方
-          </button>
-        </div>
-      </div>
-    `
-  );
-
-  const stage=ctx.stage;
+  const stage=
+    ctx.stage;
 
   const bottle=
     stage.querySelector(
       "#mediumBottle"
     );
 
-  const selectedBox=
+  const bottleContainer=
+    stage.querySelector(
+      "#boss20Round1Bottle"
+    );
+
+  const recipeLog=
     stage.querySelector(
       "#selectedReagents"
     );
 
-  const updateSelected=()=>{
-    selectedBox.innerHTML=
-      [...selected]
+  const messageBox=
+    stage.querySelector(
+      "#boss20PreparationMessage"
+    );
+
+  /*
+   * 更新加入紀錄。
+   */
+  const updateRecipeLog=()=>{
+
+    if(added.size===0){
+      recipeLog.innerHTML=`
+        <small>
+          尚未加入任何試劑
+        </small>
+      `;
+
+      return;
+    }
+
+    recipeLog.innerHTML=
+      [...added]
         .map(name=>`
-          <span class="boss-selected-reagent">
-            ${name}
+          <span
+            class="
+              boss-selected-reagent
+              ${
+                wrongReagents.includes(name)
+                  ?"wrong-reagent"
+                  :""
+              }
+            "
+          >
+            ${name} added
           </span>
         `)
         .join("");
   };
 
+  /*
+   * 更新液面。
+   */
+  const updateBottle=()=>{
+
+    const visualVolume=
+      getVisualVolume();
+
+    bottleContainer.innerHTML=
+      this.boss20BottleHtml(
+        state,
+        {
+          currentVolume:visualVolume
+        }
+      );
+  };
+
+  /*
+   * 加入試劑。
+   */
   const addReagent=name=>{
-    if(selected.has(name)){
+
+    if(added.has(name)){
+      messageBox.textContent=
+        `${name} 已經加入瓶中。`;
+
       return;
     }
 
-    selected.add(name);
-    updateSelected();
+    added.add(name);
+
+    state.addedReagents=
+      [...added];
+
+    const button=
+      stage.querySelector(
+        `[data-reagent="${name}"]`
+      );
+
+    if(button){
+      button.classList.add(
+        "selected"
+      );
+    }
+
+    updateRecipeLog();
+    updateBottle();
+
+    messageBox.textContent=
+      `${name} 已加入培養基瓶。`;
   };
 
+  updateRecipeLog();
+  updateBottle();
+
+  /*
+   * 修改輸入值時，
+   * 若試劑已經加入瓶中，
+   * 即時更新液面。
+   */
+  stage
+    .querySelectorAll(
+      "[data-volume-input]"
+    )
+    .forEach(input=>{
+
+      input.addEventListener(
+        "input",
+        ()=>{
+          if(
+            added.has(
+              input.dataset.volumeInput
+            )
+          ){
+            updateBottle();
+          }
+        }
+      );
+    });
+
+  /*
+   * Desktop drag support。
+   */
   stage
     .querySelectorAll(
       ".boss-reagent"
     )
     .forEach(button=>{
+
       button.addEventListener(
         "dragstart",
         event=>{
+
           event.dataTransfer.setData(
             "text/plain",
             button.dataset.reagent
@@ -2860,17 +3382,14 @@ boss20Preparation(ctx){
       );
 
       /*
-       * 手機點擊備援。
+       * 手機／觸控備援：
+       * 點擊試劑等同拖入瓶中。
        */
       button.addEventListener(
         "click",
         ()=>{
           addReagent(
             button.dataset.reagent
-          );
-
-          button.classList.add(
-            "selected"
           );
         }
       );
@@ -2880,6 +3399,7 @@ boss20Preparation(ctx){
     "dragover",
     event=>{
       event.preventDefault();
+
       bottle.classList.add(
         "drag-over"
       );
@@ -2898,6 +3418,7 @@ boss20Preparation(ctx){
   bottle.addEventListener(
     "drop",
     event=>{
+
       event.preventDefault();
 
       bottle.classList.remove(
@@ -2909,20 +3430,108 @@ boss20Preparation(ctx){
           "text/plain"
         );
 
-      addReagent(reagent);
+      if(reagent){
+        addReagent(reagent);
+      }
     }
   );
 
   stage.querySelector(
     "#checkPreparation"
   ).onclick=()=>{
+
     const issues=[];
 
-    required.forEach(name=>{
-      if(!selected.has(name)){
+    const answers={};
+
+    reagentNames.forEach(name=>{
+
+      const input=
+        stage.querySelector(
+          `[data-volume-input="${name}"]`
+        );
+
+      answers[name]=
+        Number(
+          input.value
+        );
+    });
+
+    /*
+     * 只要瓶中出現錯誤試劑，
+     * Round 1 立即判定不通過。
+     */
+    const addedWrongReagents=
+      wrongReagents.filter(
+        name=>added.has(name)
+      );
+
+    if(addedWrongReagents.length>0){
+
+      state.preparationPassed=false;
+
+      ctx.penalize(
+        "accuracy",
+        100,
+        `培養基中加入錯誤試劑：${addedWrongReagents.join("、")}。`
+      );
+
+      ctx.penalize(
+        "sampleQuality",
+        100,
+        "錯誤試劑已加入培養基，本回合樣本無法使用。"
+      );
+
+      messageBox.classList.add(
+        "error"
+      );
+
+      messageBox.innerHTML=`
+        <strong>
+          Round Failed
+        </strong>
+
+        <span>
+          錯誤試劑已加入：
+          ${addedWrongReagents.join("、")}
+        </span>
+      `;
+
+      stage.querySelector(
+        "#checkPreparation"
+      ).disabled=true;
+
+      /*
+       * 現有遊戲引擎沒有獨立 failRound()，
+       * 因此以滿額扣分並記錄 false 表示本回合失敗。
+       */
+      setTimeout(
+        ()=>{
+          this.finishRound(
+            ctx,
+            [
+              `Wrong reagent added: ${
+                addedWrongReagents.join(", ")
+              }`
+            ]
+          );
+        },
+        900
+      );
+
+      return;
+    }
+
+    /*
+     * 必須實際加入三種正確試劑。
+     */
+    requiredReagents.forEach(name=>{
+
+      if(!added.has(name)){
+
         ctx.penalize(
           "accuracy",
-          10,
+          20,
           `缺少必要試劑：${name}`
         );
 
@@ -2932,59 +3541,72 @@ boss20Preparation(ctx){
       }
     });
 
-    [...selected].forEach(name=>{
-      if(!required.includes(name)){
+    /*
+     * 比對五個欄位。
+     *
+     * PBS、Trypsin 的正確答案均為 0。
+     */
+    reagentNames.forEach(name=>{
+
+      const correct=
+        state.formula[name];
+
+      const answer=
+        answers[name];
+
+      const difference=
+        Math.abs(
+          answer-correct
+        );
+
+      if(difference>.01){
+
         ctx.penalize(
-          "sampleQuality",
-          14,
-          `${name} 不屬於此 Complete DMEM 配方。`
+          "accuracy",
+          15,
+          `${name} 體積錯誤。`
         );
 
         issues.push(
-          `Wrong reagent: ${name}`
+          `Wrong ${name} volume`
         );
       }
     });
 
-    const answers={
-      DMEM:Number(
+    /*
+     * 所有欄位都必須有輸入。
+     * 空白經 Number("") 會變成 0，
+     * 因此另外檢查空白值。
+     */
+    reagentNames.forEach(name=>{
+
+      const input=
         stage.querySelector(
-          "#volumeDMEM"
-        ).value
-      ),
+          `[data-volume-input="${name}"]`
+        );
 
-      FBS:Number(
-        stage.querySelector(
-          "#volumeFBS"
-        ).value
-      ),
+      if(input.value.trim()===""){
 
-      "Pen/Strep":Number(
-        stage.querySelector(
-          "#volumePenStrep"
-        ).value
-      )
-    };
+        ctx.penalize(
+          "accuracy",
+          10,
+          `${name} 欄位不可留白；不需要加入時請輸入 0。`
+        );
 
-    Object.entries(
-      values
-    ).forEach(
-      ([name,correct])=>{
-        if(
-          answers[name]!==correct
-        ){
-          ctx.penalize(
-            "accuracy",
-            12,
-            `${name} 體積計算錯誤。`
-          );
-
-          issues.push(
-            `Wrong ${name} volume`
-          );
-        }
+        issues.push(
+          `Blank ${name} field`
+        );
       }
-    );
+    });
+
+    state.preparationPassed=
+      issues.length===0;
+
+    /*
+     * Round 2 從完整總容量開始。
+     */
+    state.bottleRemaining=
+      total;
 
     this.finishRound(
       ctx,
@@ -2993,327 +3615,409 @@ boss20Preparation(ctx){
   };
 },
 
-boss20Pipette(ctx){
-  const tasks=[
-    {
-      reagent:"Pen/Strep",
-      amount:5,
-      unit:"mL",
-      tool:"P1000",
-      pipetteVolume:1000,
-      repetitions:5
-    },
-    {
-      reagent:"FBS",
-      amount:50,
-      unit:"mL",
-      tool:"Serological",
-      pipetteVolume:10,
-      repetitions:5
-    }
-  ];
 
-  const task=
-    tasks[
-      Math.floor(
-        Math.random()*
-        tasks.length
+/******************************************************************************
+ * ROUND 2
+ * Aliquot Complete DMEM
+ ******************************************************************************/
+boss20Aliquot(ctx){
+
+  const state=
+    ctx.boss20State;
+
+  const tubes=
+    state.aliquots;
+
+  const stage=
+    ctx.stage;
+
+  let selectedTubeId=null;
+  let transferring=false;
+
+  const maximumTubeVolume=
+    Math.max(
+      ...tubes.map(
+        tube=>tube.volume
       )
-    ];
+    );
 
-  let selectedReagent=null;
-  let selectedTool=null;
-  let tipInstalled=false;
+  const render=()=>{
 
-  ctx.stage.innerHTML=this.shell(
-    "Medium Preparation：Liquid Transfer",
-    `請將正確試劑加入 Complete DMEM。目標加入量為 ${task.amount} ${task.unit}，請自行選擇工具並設定每次吸取量。`,
-    `
-      <div class="boss-transfer-layout">
-        <div class="boss-reagent-bank">
-          <span class="kicker">
-            試劑
-          </span>
+    const completed=
+      tubes.filter(
+        tube=>tube.filled
+      ).length;
 
-          ${[
-            "DMEM",
-            "FBS",
-            "Pen/Strep",
-            "PBS",
-            "Trypsin"
-          ].map(name=>`
-            <button
-              type="button"
-              class="boss-transfer-reagent"
-              data-reagent="${name}"
-            >
-              ${name}
-            </button>
-          `).join("")}
-        </div>
+    stage.innerHTML=
+      this.shell(
+        "Medium Aliquot",
 
-        <div class="boss-tool-bank">
-          <span class="kicker">
-            移液工具
-          </span>
+        `將 Round 1 配製完成的 ${state.totalVolume} mL Complete DMEM 分裝至 ${tubes.length} 支離心管。點選一支離心管，再按下分裝按鈕。`,
 
-          ${[
-            "P20",
-            "P200",
-            "P1000",
-            "Serological"
-          ].map(name=>`
-            <button
-              type="button"
-              class="boss-transfer-tool"
-              data-tool="${name}"
-            >
-              ${name}
-            </button>
-          `).join("")}
-        </div>
+        `
+          <div class="boss20-aliquot-layout">
+            <div class="boss20-source-panel">
+              <span class="kicker">
+                Complete DMEM from Round 1
+              </span>
 
-        <div class="boss-transfer-controls">
-          <label>
-            每次吸取量
+              <div id="boss20SourceBottle">
+                ${this.boss20BottleHtml(
+                  state,
+                  {
+                    currentVolume:
+                      state.bottleRemaining
+                  }
+                )}
+              </div>
+            </div>
 
-            <span>
-              <input
-                type="number"
-                id="bossTransferVolume"
-                min="0"
-                step="0.1"
+            <div class="boss20-aliquot-workspace">
+              <div class="boss20-aliquot-summary">
+                <strong>
+                  Aliquot Plan
+                </strong>
+
+                <span>
+                  ${tubes
+                    .map(
+                      tube=>
+                        `${this.boss20DisplayNumber(
+                          tube.volume
+                        )} mL`
+                    )
+                    .join(" + ")
+                  }
+                </span>
+
+                <small>
+                  Completed：
+                  ${completed}
+                  /
+                  ${tubes.length}
+                </small>
+              </div>
+
+              <div class="boss20-tube-rack">
+                ${tubes
+                  .map(tube=>{
+
+                    const fillHeight=
+                      tube.filled
+                        ?Math.max(
+                          10,
+                          tube.volume/
+                          maximumTubeVolume*
+                          82
+                        )
+                        :0;
+
+                    return`
+                      <button
+                        type="button"
+                        class="
+                          boss20-aliquot-tube
+                          ${
+                            tube.filled
+                              ?"filled"
+                              :""
+                          }
+                        "
+                        data-tube="${tube.id}"
+                        ${
+                          tube.filled
+                            ?"disabled"
+                            :""
+                        }
+                      >
+                        <span class="boss20-tube-cap"></span>
+
+                        <span class="boss20-tube-body">
+                          <span
+                            class="boss20-tube-liquid"
+                            style="
+                              height:
+                              ${fillHeight}%;
+                            "
+                          ></span>
+
+                          <strong>
+                            Tube ${tube.id}
+                          </strong>
+
+                          <small>
+                            ${this.boss20DisplayNumber(
+                              tube.volume
+                            )}
+                            mL
+                          </small>
+                        </span>
+                      </button>
+                    `;
+                  })
+                  .join("")
+                }
+              </div>
+
+              <div
+                id="boss20AliquotMessage"
+                class="notice"
               >
+                請選擇一支尚未分裝的離心管。
+              </div>
 
-              <select id="bossTransferUnit">
-                <option value="uL">
-                  μL
-                </option>
+              <div class="controls">
+                <button
+                  type="button"
+                  id="boss20FillTube"
+                  class="btn btn-primary btn-large"
+                  disabled
+                >
+                  從培養基瓶分裝
+                </button>
+              </div>
+            </div>
+          </div>
+        `
+      );
 
-                <option value="mL">
-                  mL
-                </option>
-              </select>
-            </span>
-          </label>
+    const fillButton=
+      stage.querySelector(
+        "#boss20FillTube"
+      );
 
-          <label>
-            吸取次數
+    const messageBox=
+      stage.querySelector(
+        "#boss20AliquotMessage"
+      );
 
-            <input
-              type="number"
-              id="bossTransferCount"
-              min="1"
-              step="1"
-            >
-          </label>
+    stage
+      .querySelectorAll(
+        ".boss20-aliquot-tube:not(:disabled)"
+      )
+      .forEach(button=>{
 
-          <button
-            type="button"
-            id="bossInstallTip"
-            class="btn btn-soft"
-          >
-            安裝新 Tip
-          </button>
+        button.onclick=()=>{
 
-          <button
-            type="button"
-            id="bossTransferConfirm"
-            class="btn btn-primary"
-          >
-            執行轉移
-          </button>
-        </div>
-      </div>
-    `
-  );
+          if(transferring){
+            return;
+          }
 
-  const stage=ctx.stage;
-
-  stage
-    .querySelectorAll(
-      ".boss-transfer-reagent"
-    )
-    .forEach(button=>{
-      button.onclick=()=>{
-        stage
-          .querySelectorAll(
-            ".boss-transfer-reagent"
-          )
-          .forEach(item=>{
-            item.classList.remove(
-              "selected"
+          selectedTubeId=
+            Number(
+              button.dataset.tube
             );
-          });
 
-        button.classList.add(
-          "selected"
+          stage
+            .querySelectorAll(
+              ".boss20-aliquot-tube"
+            )
+            .forEach(item=>{
+              item.classList.remove(
+                "selected"
+              );
+            });
+
+          button.classList.add(
+            "selected"
+          );
+
+          const tube=
+            tubes.find(
+              item=>
+                item.id===selectedTubeId
+            );
+
+          messageBox.textContent=
+            `已選擇 Tube ${tube.id}：${this.boss20DisplayNumber(tube.volume)} mL`;
+
+          fillButton.disabled=false;
+        };
+      });
+
+    fillButton.onclick=()=>{
+
+      if(
+        selectedTubeId===null||
+        transferring
+      ){
+        return;
+      }
+
+      const tube=
+        tubes.find(
+          item=>
+            item.id===selectedTubeId
         );
 
-        selectedReagent=
-          button.dataset.reagent;
-      };
-    });
+      if(
+        !tube||
+        tube.filled
+      ){
+        return;
+      }
 
-  stage
-    .querySelectorAll(
-      ".boss-transfer-tool"
-    )
-    .forEach(button=>{
-      button.onclick=()=>{
-        stage
-          .querySelectorAll(
-            ".boss-transfer-tool"
-          )
-          .forEach(item=>{
-            item.classList.remove(
-              "selected"
-            );
-          });
-
-        button.classList.add(
-          "selected"
+      if(
+        state.bottleRemaining<
+        tube.volume
+      ){
+        ctx.penalize(
+          "sampleQuality",
+          30,
+          "培養基剩餘量不足。"
         );
 
-        selectedTool=
-          button.dataset.tool;
-      };
-    });
+        messageBox.textContent=
+          "培養基剩餘量不足，無法完成此分裝。";
 
-  stage.querySelector(
-    "#bossInstallTip"
-  ).onclick=event=>{
-    tipInstalled=true;
+        return;
+      }
 
-    event.currentTarget.textContent=
-      "Tip 已安裝";
+      transferring=true;
+      fillButton.disabled=true;
 
-    event.currentTarget.disabled=true;
+      /*
+       * 先更新資料，
+       * 然後讓液面以 CSS transition 動畫變化。
+       */
+      state.bottleRemaining=
+        Number(
+          (
+            state.bottleRemaining-
+            tube.volume
+          ).toFixed(2)
+        );
+
+      tube.filled=true;
+
+      const sourceLiquid=
+        stage.querySelector(
+          "#boss20SourceBottle .boss20-bottle-liquid"
+        );
+
+      const targetLiquid=
+        stage.querySelector(
+          `[data-tube="${tube.id}"] .boss20-tube-liquid`
+        );
+
+      const sourcePercent=
+        Math.max(
+          0,
+          state.bottleRemaining/
+          state.totalVolume*
+          100
+        );
+
+      const targetPercent=
+        Math.max(
+          10,
+          tube.volume/
+          maximumTubeVolume*
+          82
+        );
+
+      /*
+       * 觸發動畫：
+       * 母瓶下降、離心管上升。
+       */
+      requestAnimationFrame(
+        ()=>{
+
+          if(sourceLiquid){
+            sourceLiquid.style.height=
+              `${sourcePercent}%`;
+          }
+
+          if(targetLiquid){
+            targetLiquid.style.height=
+              `${targetPercent}%`;
+          }
+        }
+      );
+
+      messageBox.textContent=
+        `正在分裝 ${this.boss20DisplayNumber(tube.volume)} mL 至 Tube ${tube.id}…`;
+
+      setTimeout(
+        ()=>{
+
+          const allFilled=
+            tubes.every(
+              item=>item.filled
+            );
+
+          if(allFilled){
+
+            const issues=[];
+
+            if(
+              Math.abs(
+                state.bottleRemaining
+              )>.01
+            ){
+              ctx.penalize(
+                "accuracy",
+                30,
+                "分裝總量與配製總量不一致。"
+              );
+
+              issues.push(
+                "Aliquot total mismatch"
+              );
+            }
+
+            state.aliquotPassed=
+              issues.length===0;
+
+            this.finishRound(
+              ctx,
+              issues
+            );
+
+            return;
+          }
+
+          selectedTubeId=null;
+          transferring=false;
+
+          render();
+        },
+        650
+      );
+    };
   };
 
-  stage.querySelector(
-    "#bossTransferConfirm"
-  ).onclick=()=>{
-    const issues=[];
-
-    const volume=Number(
-      stage.querySelector(
-        "#bossTransferVolume"
-      ).value
-    );
-
-    const unit=
-      stage.querySelector(
-        "#bossTransferUnit"
-      ).value;
-
-    const count=Number(
-      stage.querySelector(
-        "#bossTransferCount"
-      ).value
-    );
-
-    if(
-      selectedReagent!==
-      task.reagent
-    ){
-      ctx.penalize(
-        "accuracy",
-        24,
-        `應選擇 ${task.reagent}。`
-      );
-
-      issues.push(
-        "Wrong reagent"
-      );
-    }
-
-    if(
-      selectedTool!==
-      task.tool
-    ){
-      ctx.penalize(
-        "accuracy",
-        18,
-        `此任務建議使用 ${task.tool}。`
-      );
-
-      issues.push(
-        "Wrong transfer tool"
-      );
-    }
-
-    if(
-      selectedTool!==
-      "Serological"&&
-      !tipInstalled
-    ){
-      ctx.penalize(
-        "safety",
-        24,
-        "Micropipette 使用前必須安裝新的 Tip。"
-      );
-
-      issues.push(
-        "Tip not installed"
-      );
-    }
-
-    const expectedUnit=
-      task.tool==="Serological"
-        ?"mL"
-        :"uL";
-
-    if(
-      volume!==
-        task.pipetteVolume||
-      count!==
-        task.repetitions||
-      unit!==
-        expectedUnit
-    ){
-      ctx.penalize(
-        "accuracy",
-        25,
-        "每次吸取量或吸取次數計算錯誤。"
-      );
-
-      issues.push(
-        "Wrong transfer calculation"
-      );
-    }
-
-    this.finishRound(
-      ctx,
-      issues
-    );
-  };
+  render();
 },
 
+
+/******************************************************************************
+ * ROUND 3
+ * Centrifuge Balance
+ ******************************************************************************/
 boss20Centrifuge(ctx){
+
+  const state=
+    ctx.boss20State;
+
   const holes=8;
 
-  const tubes=[
-    {
-      id:1,
-      volume:500
-    },
-    {
-      id:2,
-      volume:500
-    },
-    {
-      id:3,
-      volume:300
-    },
-    {
-      id:4,
-      volume:300
-    }
-  ];
+  /*
+   * 直接使用 Round 2 的同一批離心管。
+   */
+  const tubes=
+    state.aliquots.map(
+      tube=>({
+        id:tube.id,
+        pair:tube.pair,
+        volume:tube.volume
+      })
+    );
 
   const placements={};
+
   let selectedTube=null;
+  let spinning=false;
 
   const targetSpeed=1500;
   const targetTime=5;
@@ -3322,6 +4026,7 @@ boss20Centrifuge(ctx){
     Array.from(
       {length:holes},
       (_,index)=>{
+
         const angle=
           Math.PI*
           2*
@@ -3339,7 +4044,11 @@ boss20Centrifuge(ctx){
           Math.sin(angle)*
           39;
 
-        return `
+        const rotation=
+          index*45+
+          90;
+
+        return`
           <button
             type="button"
             class="rotor-hole"
@@ -3349,13 +4058,13 @@ boss20Centrifuge(ctx){
               top:${top}%;
               transform:
                 translate(-50%,-50%)
-                rotate(${index*45+90}deg);
+                rotate(${rotation}deg);
             "
           >
             <span
               style="
                 transform:
-                  rotate(-${index*45+90}deg);
+                  rotate(-${rotation}deg);
               "
             >
               ${index+1}
@@ -3365,90 +4074,131 @@ boss20Centrifuge(ctx){
       }
     ).join("");
 
-  ctx.stage.innerHTML=this.shell(
-    "Quality Control：Centrifuge",
-    "將四支 sample tube 正確配平，並設定 1500 ×g、5分鐘。",
-    `
-      <div class="centrifuge-wrap">
-        <div
-          class="rotor rotor-8"
-          id="bossRotor"
-        >
-          ${holesHtml}
-        </div>
+  ctx.stage.innerHTML=
+    this.shell(
+      "Quality Control：Centrifuge",
 
-        <div class="tube-bank">
-          ${tubes.map(tube=>`
-            <button
-              type="button"
-              class="tube-token"
-              data-tube="${tube.id}"
-              data-volume="${tube.volume}"
+      `將 Round 2 的 ${tubes.length} 支 Complete DMEM 離心管放入 rotor。正對面的離心管必須具有相同容量，並設定 1500 ×g、5分鐘。`,
+
+      `
+        <div class="centrifuge-wrap">
+          <div
+            class="rotor rotor-8"
+            id="bossRotor"
+          >
+            ${holesHtml}
+          </div>
+
+          <div>
+            <div
+              class="bench-card"
+              style="
+                position:static;
+                margin-bottom:12px;
+              "
             >
-              <strong>
-                Tube ${tube.id}
-              </strong>
-
-              <span>
-                ${tube.volume} μL
+              <span class="kicker">
+                Centrifuge Conditions
               </span>
-            </button>
-          `).join("")}
+
+              <p>
+                <strong>
+                  1500 ×g
+                </strong>
+
+                ／
+
+                <strong>
+                  5 min
+                </strong>
+              </p>
+
+              <small>
+                正對面的 tube 必須具有相同容量。
+              </small>
+            </div>
+
+            <div class="tube-bank">
+              ${tubes
+                .map(tube=>`
+                  <button
+                    type="button"
+                    class="tube-token"
+                    data-tube="${tube.id}"
+                    data-pair="${tube.pair}"
+                    data-volume="${tube.volume}"
+                  >
+                    <strong>
+                      Tube ${tube.id}
+                    </strong>
+
+                    <span>
+                      ${this.boss20DisplayNumber(
+                        tube.volume
+                      )}
+                      mL
+                    </span>
+                  </button>
+                `)
+                .join("")
+              }
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="parameter-grid">
-        <label>
-          離心力
+        <div class="parameter-grid">
+          <label>
+            離心力
 
-          <strong>
-            <span id="bossGText">
-              500
-            </span>
-            ×g
-          </strong>
+            <strong>
+              <span id="bossGText">
+                500
+              </span>
+              ×g
+            </strong>
 
-          <input
-            type="range"
-            id="bossGForce"
-            min="500"
-            max="3000"
-            step="500"
-            value="500"
+            <input
+              type="range"
+              id="bossGForce"
+              min="500"
+              max="3000"
+              step="500"
+              value="500"
+            >
+          </label>
+
+          <label>
+            時間
+
+            <strong id="bossTimeText">
+              1 min
+            </strong>
+
+            <input
+              type="range"
+              id="bossSpinTime"
+              min="1"
+              max="10"
+              step="1"
+              value="1"
+            >
+          </label>
+        </div>
+
+        <div class="controls">
+          <button
+            type="button"
+            id="bossSpinButton"
+            class="btn btn-primary btn-large"
           >
-        </label>
+            啟動離心機
+          </button>
+        </div>
+      `
+    );
 
-        <label>
-          時間
-
-          <strong id="bossTimeText">
-            1 min
-          </strong>
-
-          <input
-            type="range"
-            id="bossSpinTime"
-            min="1"
-            max="10"
-            step="1"
-            value="1"
-          >
-        </label>
-      </div>
-
-      <div class="controls">
-        <button
-          type="button"
-          id="bossSpinButton"
-          class="btn btn-primary btn-large"
-        >
-          啟動離心機
-        </button>
-      </div>
-    `
-  );
-
-  const stage=ctx.stage;
+  const stage=
+    ctx.stage;
 
   const rotor=
     stage.querySelector(
@@ -3465,7 +4215,13 @@ boss20Centrifuge(ctx){
       "#bossSpinTime"
     );
 
+  const spinButton=
+    stage.querySelector(
+      "#bossSpinButton"
+    );
+
   gForce.oninput=()=>{
+
     stage.querySelector(
       "#bossGText"
     ).textContent=
@@ -3473,6 +4229,7 @@ boss20Centrifuge(ctx){
   };
 
   spinTime.oninput=()=>{
+
     stage.querySelector(
       "#bossTimeText"
     ).textContent=
@@ -3484,8 +4241,13 @@ boss20Centrifuge(ctx){
       ".tube-token"
     )
     .forEach(button=>{
+
       button.onclick=()=>{
-        if(button.disabled){
+
+        if(
+          button.disabled||
+          spinning
+        ){
           return;
         }
 
@@ -3512,9 +4274,25 @@ boss20Centrifuge(ctx){
       ".rotor-hole"
     )
     .forEach(hole=>{
+
       hole.onclick=()=>{
+
+        if(spinning){
+          return;
+        }
+
+        if(!selectedTube){
+
+          ctx.penalize(
+            "safety",
+            8,
+            "請先選擇一支離心管。"
+          );
+
+          return;
+        }
+
         if(
-          !selectedTube||
           hole.classList.contains(
             "filled"
           )
@@ -3522,20 +4300,29 @@ boss20Centrifuge(ctx){
           return;
         }
 
-        const position=Number(
-          hole.dataset.hole
-        );
+        const position=
+          Number(
+            hole.dataset.hole
+          );
 
-        const tubeId=Number(
-          selectedTube.dataset.tube
-        );
+        const tubeId=
+          Number(
+            selectedTube.dataset.tube
+          );
 
-        const volume=Number(
-          selectedTube.dataset.volume
-        );
+        const pair=
+          Number(
+            selectedTube.dataset.pair
+          );
+
+        const volume=
+          Number(
+            selectedTube.dataset.volume
+          );
 
         placements[position]={
           tubeId,
+          pair,
           volume
         };
 
@@ -3543,11 +4330,23 @@ boss20Centrifuge(ctx){
           "filled"
         );
 
+        const rotation=
+          position*45+
+          90;
+
         hole.innerHTML=`
-          <strong>
+          <strong
+            style="
+              transform:
+                rotate(-${rotation}deg);
+            "
+          >
             ${tubeId}
           </strong>
         `;
+
+        hole.title=
+          `Tube ${tubeId}：${this.boss20DisplayNumber(volume)} mL`;
 
         selectedTube.disabled=true;
 
@@ -3559,9 +4358,12 @@ boss20Centrifuge(ctx){
       };
     });
 
-  stage.querySelector(
-    "#bossSpinButton"
-  ).onclick=()=>{
+  spinButton.onclick=()=>{
+
+    if(spinning){
+      return;
+    }
+
     const positions=
       Object.keys(
         placements
@@ -3582,8 +4384,13 @@ boss20Centrifuge(ctx){
 
     const issues=[];
 
+    /*
+     * 每一支 tube 的正對面，
+     * 都必須有一支相同容量的 tube。
+     */
     const balanced=
       positions.every(position=>{
+
         const opposite=
           (
             position+
@@ -3592,12 +4399,15 @@ boss20Centrifuge(ctx){
 
         return Boolean(
           placements[opposite]&&
-          placements[position].volume===
-          placements[opposite].volume
+          Math.abs(
+            placements[position].volume-
+            placements[opposite].volume
+          )<.01
         );
       });
 
     if(!balanced){
+
       ctx.penalize(
         "safety",
         45,
@@ -3639,6 +4449,12 @@ boss20Centrifuge(ctx){
       );
     }
 
+    state.centrifugePassed=
+      issues.length===0;
+
+    spinning=true;
+    spinButton.disabled=true;
+
     rotor.classList.add(
       "spinning"
     );
@@ -3659,64 +4475,101 @@ boss20Centrifuge(ctx){
   };
 },
 
+
+/******************************************************************************
+ * ROUND 4
+ * Label and Storage
+ ******************************************************************************/
 boss20Label(ctx){
+
+  const state=
+    ctx.boss20State;
+
   const correctItems=[
     "Complete DMEM",
+    `${state.totalVolume} mL`,
+    "10% FBS",
+    "1% Pen/Strep",
     "Preparation Date",
     "Operator Initials",
     "4°C"
   ];
 
+  const allItems=[
+    "Complete DMEM",
+    `${state.totalVolume} mL`,
+    "10% FBS",
+    "1% Pen/Strep",
+    "Preparation Date",
+    "Operator Initials",
+    "4°C",
+    "-20°C",
+    "PBS",
+    "Trypsin",
+    "No Label Needed"
+  ];
+
   const selected=
     new Set();
 
-  ctx.stage.innerHTML=this.shell(
-    "Label and Storage",
-    "完成培養基標示，並選擇正確保存條件。",
-    `
-      <div class="boss-label-layout">
-        <div class="boss-label-bank">
-          ${[
-            "Complete DMEM",
-            "Preparation Date",
-            "Operator Initials",
-            "4°C",
-            "-20°C",
-            "PBS",
-            "No Label Needed"
-          ].map(item=>`
-            <button
-              type="button"
-              class="boss-label-option"
-              data-label="${item}"
-            >
-              ${item}
-            </button>
-          `).join("")}
+  ctx.stage.innerHTML=
+    this.shell(
+      "Label and Storage",
+
+      "替本次配製的 Complete DMEM 瓶身選擇完整標示內容，並選擇正確保存條件。",
+
+      `
+        <div class="boss-label-layout">
+          <div class="boss-label-bank">
+            ${shuffle(allItems)
+              .map(item=>`
+                <button
+                  type="button"
+                  class="boss-label-option"
+                  data-label="${item}"
+                >
+                  ${item}
+                </button>
+              `)
+              .join("")
+            }
+          </div>
+
+          <div class="boss-label-preview">
+            ${this.boss20BottleHtml(
+              state,
+              {
+                currentVolume:
+                  state.bottleRemaining,
+                showLabel:false
+              }
+            )}
+
+            <strong>
+              Medium Bottle Label
+            </strong>
+
+            <div
+              id="bossLabelSelected"
+              class="boss20-label-sheet"
+            ></div>
+          </div>
         </div>
 
-        <div class="boss-label-preview">
-          <strong>
-            Medium Bottle Label
-          </strong>
-
-          <div id="bossLabelSelected"></div>
+        <div class="controls">
+          <button
+            type="button"
+            id="bossLabelConfirm"
+            class="btn btn-primary btn-large"
+          >
+            完成標示並存放
+          </button>
         </div>
-      </div>
+      `
+    );
 
-      <div class="controls">
-        <button
-          type="button"
-          id="bossLabelConfirm"
-          class="btn btn-primary btn-large"
-        >
-          完成標示並存放
-        </button>
-      </div>
-    `
-  );
-
-  const stage=ctx.stage;
+  const stage=
+    ctx.stage;
 
   const preview=
     stage.querySelector(
@@ -3724,6 +4577,18 @@ boss20Label(ctx){
     );
 
   const update=()=>{
+
+    if(selected.size===0){
+
+      preview.innerHTML=`
+        <small>
+          尚未選擇標籤內容
+        </small>
+      `;
+
+      return;
+    }
+
     preview.innerHTML=
       [...selected]
         .map(item=>`
@@ -3734,22 +4599,29 @@ boss20Label(ctx){
         .join("");
   };
 
+  update();
+
   stage
     .querySelectorAll(
       ".boss-label-option"
     )
     .forEach(button=>{
+
       button.onclick=()=>{
+
         const item=
           button.dataset.label;
 
         if(selected.has(item)){
+
           selected.delete(item);
 
           button.classList.remove(
             "selected"
           );
+
         }else{
+
           selected.add(item);
 
           button.classList.add(
@@ -3764,10 +4636,13 @@ boss20Label(ctx){
   stage.querySelector(
     "#bossLabelConfirm"
   ).onclick=()=>{
+
     const issues=[];
 
     correctItems.forEach(item=>{
+
       if(!selected.has(item)){
+
         ctx.penalize(
           "sampleQuality",
           10,
@@ -3781,7 +4656,9 @@ boss20Label(ctx){
     });
 
     [...selected].forEach(item=>{
+
       if(!correctItems.includes(item)){
+
         ctx.penalize(
           "accuracy",
           10,
@@ -3794,12 +4671,17 @@ boss20Label(ctx){
       }
     });
 
+    state.labelPassed=
+      issues.length===0;
+
     this.finishRound(
       ctx,
       issues
     );
   };
 },
+
+
 
 boss20Inspection(ctx){
   const allErrors=[
