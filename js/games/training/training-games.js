@@ -2,7 +2,7 @@ const TRAINING_META={
   pipette:{name:"Micropipette Training",icon:"🧪"},
   serological:{name:"Serological Pipette",icon:"🧫"},
   centrifuge:{name:"Centrifuge Balance",icon:"⚙️"},
-  equipment:{name:"Equipment & Incubator",icon:"🌡️"},
+  equipment:{name:"Lab Knowledge",icon:"🧠"},
   plate:{name:"96-Well Plate",icon:"▦"},
   microscope:{name:"Microscope Focus",icon:"🔬"},
   labInspection:{name:"Lab Safety Inspection",icon:"⚠️"}
@@ -54,17 +54,47 @@ const TrainingGames={
   },
 
   roundCount(level){
+
     level=Number(level);
 
-    if(level>=1&&level<=7)return 3;
-    if(level>=8&&level<=11)return 4;
-    if(level===12)return 3;
-    if(level>=13&&level<=15)return 5;
-    if(level>=16&&level<=17)return 3;
-    if(level>=18&&level<=19)return 1;
+    /*
+     * Pipette
+     */
+    if(level<=7){
+        return 3;
+    }
+
+    /*
+     * Centrifuge
+     */
+    if(level<=11){
+        return 4;
+    }
+
+    /*
+     * Question Bank
+     */
+    if(level<=14){
+        return 3;
+    }
+
+    /*
+     * Plate
+     */
+    if(level<=17){
+        return 5;
+    }
+
+    /*
+     * Microscope
+     */
+    if(level<=19){
+        return 3;
+    }
 
     return 1;
-  },
+
+},
 
   addRoundHeader(stage,current,total){
     const box=document.createElement("div");
@@ -1505,7 +1535,7 @@ const TrainingGames={
     const targetCount=
       3+
       ctx.config.level-
-      13;
+      15;
 
     const targets=[];
 
