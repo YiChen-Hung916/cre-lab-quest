@@ -552,11 +552,14 @@ function generatePBSQuestion(){
 
         title:"PBS Dilution",
 
-        text:`需要配製 ${volume} mL 1× PBS，目前只有 ${stock}× PBS。應加入多少 mL stock？`,
+        text:
+`需要配製 ${volume} mL 1× PBS
 
-        answer:volume/stock,
+目前只有 ${stock}× PBS
 
-        unit:"mL"
+需要加入多少 mL stock？`,
+
+        correct:volume/stock
 
     };
 
@@ -571,30 +574,37 @@ function generateCompleteMediumQuestion(){
         1000
     ]);
 
+    const part=randomChoice([
+        "FBS",
+        "Pen/Strep",
+        "DMEM"
+    ]);
+
+    let correct;
+
+    if(part==="FBS")
+        correct=volume*0.10;
+
+    else if(part==="Pen/Strep")
+        correct=volume*0.01;
+
+    else
+        correct=volume*0.89;
+
     return{
 
         title:"Complete Medium",
 
         text:
-`配製 ${volume} mL complete medium。
+`配製 ${volume} mL Complete Medium
 
 FBS 10%
 
 Pen/Strep 1%
 
-請問：
+請問 ${part} 需要多少 mL？`,
 
-FBS=? mL
-
-Pen/Strep=? mL
-
-DMEM=? mL`,
-
-        answer:{
-            fbs:volume*.1,
-            ps:volume*.01,
-            dmem:volume*.89
-        }
+        correct
 
     };
 
@@ -624,16 +634,13 @@ function generatePowderQuestion(){
         text:
 `${mass} mg powder
 
-配置成
+欲配置成
 
 ${concentration} mg/mL
 
 需加入多少 mL？`,
 
-        answer:
-            mass/concentration,
-
-        unit:"mL"
+        correct:mass/concentration
 
     };
 
@@ -678,51 +685,60 @@ ${volume} mL
 
 需要加入多少 μL？`,
 
-        answer:
+        correct:
             volume*
             target/
-            stock,
-
-        unit:"μL"
+            stock
 
     };
 
 }
 
 function generateStockQuestion(){
+
     const stock=randomChoice([
         100,
         200,
         500,
         1000
     ]);
+
     const target=randomChoice([
         10,
         20,
         50
     ]);
+
     const volume=randomChoice([
         10,
         20,
         50
     ]);
+
     return{
+
         title:"Stock Solution",
+
         text:
 `${stock} μM
+
 ↓
+
 ${target} μM
+
 ↓
+
 ${volume} mL
+
 需要加入多少 mL Stock？`,
-        answer:
+
+        correct:
             volume*
             target/
-            stock,
-
-        unit:"mL"
+            stock
 
     };
+
 }
 
 function getQuestion(level){
