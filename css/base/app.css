@@ -199,6 +199,152 @@ radial-gradient(circle at 30% 70%,rgba(177,82,104,.75) 0 5%,transparent 5.5%),
 radial-gradient(circle at 56% 74%,rgba(202,122,139,.75) 0 4%,transparent 4.5%),
 radial-gradient(circle at 12% 54%,rgba(191,101,118,.7) 0 4%,transparent 4.5%),
 linear-gradient(#f1d9d9,#dfbbbb);filter:blur(10px) brightness(.95);transform:scale(1.15);transition:.25s}.scope-controls{display:flex;flex-direction:column;gap:12px}.scope-controls label{background:#f1f6f8;padding:12px;border-radius:14px}.scope-controls input{width:100%}
+
+.boss-mission-card,
+.boss-preparation-layout,
+.boss-transfer-layout,
+.boss-label-layout{
+  display:grid;
+  gap:18px;
+}
+
+.boss-preparation-layout,
+.boss-label-layout{
+  grid-template-columns:
+    minmax(0,1fr)
+    minmax(260px,1fr);
+}
+
+.boss-reagent-bank,
+.boss-tool-bank,
+.boss-label-bank{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.boss-reagent,
+.boss-transfer-reagent,
+.boss-transfer-tool,
+.boss-label-option{
+  border:1px solid rgba(15,23,42,.14);
+  border-radius:14px;
+  background:#fff;
+  padding:12px 16px;
+  cursor:pointer;
+}
+
+.boss-reagent.selected,
+.boss-transfer-reagent.selected,
+.boss-transfer-tool.selected,
+.boss-label-option.selected{
+  border-color:#2563eb;
+  box-shadow:
+    0 0 0 3px
+    rgba(37,99,235,.12);
+}
+
+.boss-medium-bottle{
+  min-height:220px;
+  border:2px dashed rgba(37,99,235,.35);
+  border-radius:28px 28px 16px 16px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.95),
+      rgba(219,234,254,.75)
+    );
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  transition:.2s ease;
+}
+
+.boss-medium-bottle.drag-over{
+  transform:scale(1.02);
+  border-color:#2563eb;
+  background:#dbeafe;
+}
+
+#selectedReagents,
+#bossLabelSelected{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+  margin-top:16px;
+}
+
+.boss-selected-reagent,
+.boss-label-tag{
+  border-radius:999px;
+  background:#e0f2fe;
+  padding:7px 11px;
+  font-size:.85rem;
+}
+
+.boss-volume-grid{
+  display:grid;
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0,1fr)
+    );
+  gap:12px;
+}
+
+.boss-volume-grid label,
+.boss-transfer-controls label{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:14px;
+  border-radius:14px;
+  background:rgba(248,250,252,.95);
+}
+
+.boss-volume-grid input,
+.boss-transfer-controls input,
+.boss-transfer-controls select{
+  width:100%;
+  padding:10px;
+  border:1px solid rgba(15,23,42,.15);
+  border-radius:10px;
+}
+
+.boss-transfer-controls{
+  display:grid;
+  gap:12px;
+}
+
+.boss-label-preview{
+  min-height:200px;
+  padding:22px;
+  border-radius:18px;
+  background:
+    linear-gradient(
+      145deg,
+      #f8fafc,
+      #e0f2fe
+    );
+  border:1px solid rgba(15,23,42,.1);
+}
+
+.lab-object.found-error{
+  border-color:#16a34a;
+  background:#dcfce7;
+}
+
+@media(max-width:720px){
+  .boss-preparation-layout,
+  .boss-label-layout,
+  .boss-volume-grid{
+    grid-template-columns:1fr;
+  }
+}
 .event-card{padding:18px;border-radius:18px;background:#f4f8fa;border:1px solid #d8e5eb;margin:12px 0}.event-options{display:grid;gap:10px}.event-options button{padding:14px;border:1px solid #d5e2e8;border-radius:13px;background:white;cursor:pointer;text-align:left}.event-options button:hover{border-color:#67b6a7}
 .modal,.drawer{position:fixed;inset:0;z-index:80;background:rgba(13,35,49,.63);display:flex;align-items:center;justify-content:center;padding:16px}.modal-card,.drawer-card{width:min(520px,100%);max-height:92vh;overflow:auto;background:white;border-radius:26px;padding:24px;text-align:center;box-shadow:0 28px 70px rgba(0,0,0,.22)}.modal-icon{font-size:3rem}.modal-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.modal-scores div{padding:14px;border-radius:14px;background:#edf4f6;text-align:center;}.modal-actions{display:flex;justify-content:center;gap:10px}.drawer-card{position:relative;text-align:left}.drawer-close{position:absolute;right:14px;top:10px;border:0;background:transparent;font-size:2rem;cursor:pointer}.usage-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.usage-box{padding:14px;border-radius:14px;background:#eff5f7}.usage-track{height:9px;border-radius:999px;background:#dce7eb;overflow:hidden}.usage-track i{display:block;height:100%;background:var(--teal)}.notice{padding:12px 14px;border-left:4px solid var(--gold);background:#fff7e8;border-radius:10px}
 .modal-scores span{
