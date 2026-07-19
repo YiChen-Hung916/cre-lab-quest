@@ -345,6 +345,414 @@ linear-gradient(#f1d9d9,#dfbbbb);filter:blur(10px) brightness(.95);transform:sca
     grid-template-columns:1fr;
   }
 }
+
+/******************************************************************************
+ * BOSS 20 — SHARED BOTTLE
+ ******************************************************************************/
+
+.boss20-bottle-drop-zone{
+  min-height:390px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  padding:22px;
+  border:2px dashed #aabfc8;
+  border-radius:24px;
+  background:
+    linear-gradient(
+      145deg,
+      #f8fbfc,
+      #edf5f7
+    );
+  transition:
+    border-color .2s,
+    background .2s;
+}
+
+.boss20-bottle-drop-zone.drag-over{
+  border-color:#3e8da1;
+  background:#e8f5f7;
+}
+
+.boss20-real-bottle{
+  width:185px;
+  margin:auto;
+  position:relative;
+  filter:
+    drop-shadow(
+      0 15px 18px
+      rgba(34,57,70,.18)
+    );
+}
+
+.boss20-bottle-cap{
+  width:92px;
+  height:30px;
+  margin:auto;
+  border:2px solid #9d3f3e;
+  border-radius:9px 9px 4px 4px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #c95652 0 5px,
+      #e17a74 5px 9px
+    );
+}
+
+.boss20-bottle-neck{
+  width:74px;
+  height:35px;
+  margin:auto;
+  border-left:2px solid #a8bbc3;
+  border-right:2px solid #a8bbc3;
+  background:
+    linear-gradient(
+      90deg,
+      #d6e4e8,
+      #ffffff,
+      #d1e0e5
+    );
+}
+
+.boss20-bottle-body{
+  height:280px;
+  position:relative;
+  overflow:hidden;
+  border:3px solid #9db2bb;
+  border-radius:
+    22px
+    22px
+    34px
+    34px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(220,234,238,.78),
+      rgba(255,255,255,.94),
+      rgba(211,228,233,.78)
+    );
+}
+
+.boss20-bottle-liquid{
+  position:absolute;
+  z-index:1;
+  right:0;
+  bottom:0;
+  left:0;
+  height:0;
+  background:
+    linear-gradient(
+      180deg,
+      #efa8ad,
+      #db747c
+    );
+  transition:
+    height .6s ease;
+}
+
+.boss20-bottle-liquid::before{
+  content:"";
+  position:absolute;
+  top:-4px;
+  right:0;
+  left:0;
+  height:8px;
+  border-radius:50%;
+  background:
+    rgba(255,210,214,.88);
+}
+
+.boss20-bottle-volume{
+  position:absolute;
+  z-index:4;
+  right:12px;
+  bottom:12px;
+  left:12px;
+  display:flex;
+  flex-direction:column;
+  padding:9px;
+  border-radius:8px;
+  background:
+    rgba(255,255,255,.84);
+  color:#294656;
+  text-align:center;
+}
+
+.boss20-bottle-volume strong{
+  font-size:1rem;
+}
+
+.boss20-bottle-volume small{
+  font-size:.72rem;
+}
+
+.boss20-bottle-label{
+  position:absolute;
+  z-index:3;
+  top:62px;
+  right:16px;
+  left:16px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:12px;
+  border:1px solid #9fb2ba;
+  border-radius:8px;
+  background:
+    rgba(255,255,255,.94);
+  color:#243b49;
+  font-size:.72rem;
+}
+
+.boss20-bottle-label strong{
+  font-size:.9rem;
+}
+
+
+/******************************************************************************
+ * ROUND 1
+ ******************************************************************************/
+
+.boss20-recipe-log{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:7px;
+}
+
+.boss-selected-reagent.wrong-reagent{
+  border-color:#c95050;
+  background:#fff0f0;
+  color:#a92e2e;
+}
+
+.boss-volume-grid-five{
+  grid-template-columns:
+    repeat(
+      5,
+      minmax(130px,1fr)
+    );
+}
+
+.notice.error{
+  border-color:#d35d5d;
+  background:#fff0f0;
+  color:#9e2929;
+}
+
+
+/******************************************************************************
+ * ROUND 2
+ ******************************************************************************/
+
+.boss20-aliquot-layout{
+  display:grid;
+  grid-template-columns:
+    minmax(230px,.7fr)
+    minmax(380px,1.3fr);
+  gap:24px;
+  align-items:center;
+}
+
+.boss20-source-panel,
+.boss20-aliquot-workspace{
+  padding:20px;
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:#f6fafb;
+}
+
+.boss20-aliquot-summary{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:18px;
+}
+
+.boss20-tube-rack{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:flex-end;
+  gap:13px;
+  min-height:230px;
+}
+
+.boss20-aliquot-tube{
+  width:76px;
+  padding:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  transition:
+    transform .2s,
+    filter .2s;
+}
+
+.boss20-aliquot-tube:hover:not(:disabled),
+.boss20-aliquot-tube.selected{
+  transform:
+    translateY(-8px);
+  filter:
+    drop-shadow(
+      0 7px 8px
+      rgba(27,60,77,.18)
+    );
+}
+
+.boss20-aliquot-tube:disabled{
+  opacity:1;
+  cursor:default;
+}
+
+.boss20-tube-cap{
+  display:block;
+  width:60px;
+  height:24px;
+  margin:auto;
+  border:2px solid #306482;
+  border-radius:7px 7px 3px 3px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #3e7898 0 5px,
+      #69a4c0 5px 9px
+    );
+}
+
+.boss20-tube-body{
+  display:flex;
+  position:relative;
+  overflow:hidden;
+  height:175px;
+  border:3px solid #9db3bd;
+  border-radius:
+    8px
+    8px
+    24px
+    24px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(226,239,243,.82),
+      rgba(255,255,255,.94),
+      rgba(218,233,238,.82)
+    );
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+
+.boss20-tube-liquid{
+  position:absolute;
+  z-index:1;
+  right:0;
+  bottom:0;
+  left:0;
+  height:0;
+  background:
+    linear-gradient(
+      180deg,
+      #eea5ab,
+      #d8737c
+    );
+  transition:
+    height .6s ease;
+}
+
+.boss20-tube-liquid::before{
+  content:"";
+  position:absolute;
+  top:-3px;
+  right:0;
+  left:0;
+  height:7px;
+  border-radius:50%;
+  background:
+    rgba(255,213,216,.9);
+}
+
+.boss20-tube-body strong,
+.boss20-tube-body small{
+  position:relative;
+  z-index:2;
+  padding:2px 5px;
+  border-radius:5px;
+  background:
+    rgba(255,255,255,.78);
+  color:#243d4b;
+}
+
+
+/******************************************************************************
+ * ROUND 4
+ ******************************************************************************/
+
+.boss20-label-sheet{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-height:140px;
+  margin-top:12px;
+  padding:15px;
+  border:1px solid #bbc9ce;
+  border-radius:9px;
+  background:#fffdf7;
+}
+
+
+/******************************************************************************
+ * RESPONSIVE
+ ******************************************************************************/
+
+@media(max-width:900px){
+
+  .boss-volume-grid-five{
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(140px,1fr)
+      );
+  }
+
+  .boss20-aliquot-layout{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:560px){
+
+  .boss-volume-grid-five{
+    grid-template-columns:1fr;
+  }
+
+  .boss20-real-bottle{
+    width:155px;
+  }
+
+  .boss20-bottle-body{
+    height:235px;
+  }
+
+  .boss20-tube-rack{
+    gap:8px;
+  }
+
+  .boss20-aliquot-tube{
+    width:65px;
+  }
+
+  .boss20-tube-cap{
+    width:51px;
+  }
+
+  .boss20-tube-body{
+    height:150px;
+  }
+}
+
 .event-card{padding:18px;border-radius:18px;background:#f4f8fa;border:1px solid #d8e5eb;margin:12px 0}.event-options{display:grid;gap:10px}.event-options button{padding:14px;border:1px solid #d5e2e8;border-radius:13px;background:white;cursor:pointer;text-align:left}.event-options button:hover{border-color:#67b6a7}
 .modal,.drawer{position:fixed;inset:0;z-index:80;background:rgba(13,35,49,.63);display:flex;align-items:center;justify-content:center;padding:16px}.modal-card,.drawer-card{width:min(520px,100%);max-height:92vh;overflow:auto;background:white;border-radius:26px;padding:24px;text-align:center;box-shadow:0 28px 70px rgba(0,0,0,.22)}.modal-icon{font-size:3rem}.modal-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.modal-scores div{padding:14px;border-radius:14px;background:#edf4f6;text-align:center;}.modal-actions{display:flex;justify-content:center;gap:10px}.drawer-card{position:relative;text-align:left}.drawer-close{position:absolute;right:14px;top:10px;border:0;background:transparent;font-size:2rem;cursor:pointer}.usage-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.usage-box{padding:14px;border-radius:14px;background:#eff5f7}.usage-track{height:9px;border-radius:999px;background:#dce7eb;overflow:hidden}.usage-track i{display:block;height:100%;background:var(--teal)}.notice{padding:12px 14px;border-left:4px solid var(--gold);background:#fff7e8;border-radius:10px}
 .modal-scores span{
