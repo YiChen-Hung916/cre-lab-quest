@@ -28,13 +28,37 @@ function bossRounds(level){
 }
 
 function trainingMode(level){
-  if(level<=4)return "pipette";
-  if(level<=7)return "serological";
-  if(level<=11)return "centrifuge";
-  if(level===12)return "equipment";
-  if(level<=15)return "plate";
-  if(level<=17)return "microscope";
-  if(level<=19)return "labInspection";
+
+  if(level<=4){
+    return "pipette";
+  }
+  if(level<=7){
+    return "serological";
+  }
+  if(level<=11){
+    return "centrifuge";
+  }
+  /*
+   * Question Bank
+   * 12 Lab Knowledge
+   * 13 Storage
+   * 14 Solution Preparation
+   */
+  if(level<=14){
+    return "equipment";
+  }
+  /*
+   * Plate
+   */
+  if(level<=17){
+    return "plate";
+  }
+  /*
+   * Microscope
+   */
+  if(level<=19){
+    return "microscope";
+  }
   return "boss";
 }
 
@@ -64,9 +88,35 @@ function buildLevels(){
         level,
         type:level===20?"boss":"training",
         mode:trainingMode(level),
-        title:level===20
-          ?"新人儀器綜合考核"
-          :`新人訓練 ${level}`,
+        title:
+        level===20
+        ?"新人儀器綜合考核"
+        :
+        level<=4
+        ?"Micropipette Training"
+        :
+        level<=7
+        ?"Serological Pipette"
+        :
+        level<=11
+        ?"Centrifuge Training"
+        :
+        level===12
+        ?"Lab Knowledge"
+        :
+        level===13
+        ?"Reagent Storage"
+        :
+        level===14
+        ?"Solution Preparation"
+        :
+        level<=17
+        ?"96-Well Plate"
+        :
+        level<=19
+        ?"Microscope Training"
+        :
+        `新人訓練 ${level}`,
         difficulty:Math.ceil(level/4),
         rounds:level===20?3:0
       });
