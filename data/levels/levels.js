@@ -28,7 +28,6 @@ function bossRounds(level){
 }
 
 function trainingMode(level){
-
   if(level<=4){
     return "pipette";
   }
