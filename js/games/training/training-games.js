@@ -217,23 +217,31 @@ answer:1
 },
 
 {
-name:"RPMI-1640",
-answer:"4°C"
+title:"RPMI-1640",
+text:"RPMI-1640 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"MEM",
-answer:"4°C"
+title:"MEM",
+text:"MEM 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"PBS",
-answer:"Room Temperature"
+title:"PBS",
+text:"PBS 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"HBSS",
-answer:"4°C"
+title:"HBSS",
+text:"HBSS 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
@@ -251,147 +259,202 @@ answer:2
 },
 
 {
-name:"Penicillin/Streptomycin",
-answer:"-20°C"
+title:"Penicillin / Streptomycin",
+text:"Penicillin / Streptomycin 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"Glutamine",
-answer:"-20°C"
+title:"Glutamine",
+text:"Glutamine 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"Protein Ladder",
-answer:"-20°C"
+title:"Protein Ladder",
+text:"Protein Ladder 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"Primary Antibody",
-answer:"-20°C"
+title:"Primary Antibody",
+text:"Primary Antibody 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"Secondary Antibody",
-answer:"4°C"
+title:"Secondary Antibody",
+text:"Secondary Antibody 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"RIPA Buffer",
-answer:"4°C"
+title:"RIPA Buffer",
+text:"RIPA Buffer 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"TBST",
-answer:"Room Temperature"
+title:"TBST",
+text:"TBST 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"TBS",
-answer:"Room Temperature"
+title:"TBS",
+text:"TBS 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"BSA Powder",
-answer:"Room Temperature"
+title:"BSA Powder",
+text:"BSA Powder 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"BSA Solution",
-answer:"4°C"
+title:"BSA Solution",
+text:"BSA Solution 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"Skim Milk Powder",
-answer:"Room Temperature"
+title:"Skim Milk Powder",
+text:"Skim Milk Powder 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"PVDF Membrane",
-answer:"Room Temperature"
+title:"PVDF Membrane",
+text:"PVDF Membrane 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"Nitrocellulose Membrane",
-answer:"Room Temperature"
+title:"Nitrocellulose Membrane",
+text:"Nitrocellulose Membrane 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"TRIzol",
-answer:"4°C"
+title:"TRIzol",
+text:"TRIzol 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"RNA Sample",
-answer:"-80°C"
+title:"RNA Sample",
+text:"RNA Sample 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:3
 },
 
 {
-name:"DNA Sample",
-answer:"-20°C"
+title:"DNA Sample",
+text:"DNA Sample 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"Protein Lysate",
-answer:"-80°C"
+title:"Protein Lysate",
+text:"Protein Lysate 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:3
 },
 
 {
-name:"Cell Pellet",
-answer:"-80°C"
+title:"Cell Pellet",
+text:"Cell Pellet 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:3
 },
 
 {
 title:"Cell Line",
-text:"Cell line 應保存於？",
+text:"Cell Line 應保存於？",
 options:MCQ_OPTIONS.storage,
 answer:4
 },
 
 {
-name:"Organoid",
-answer:"Liquid Nitrogen"
+title:"Organoid",
+text:"Organoid 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:4
 },
 
 {
-name:"Plasmid DNA",
-answer:"-20°C"
+title:"Plasmid DNA",
+text:"Plasmid DNA 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"PCR Mix",
-answer:"-20°C"
+title:"PCR Mix",
+text:"PCR Mix 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"Restriction Enzyme",
-answer:"-20°C"
+title:"Restriction Enzyme",
+text:"Restriction Enzyme 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"Loading Dye",
-answer:"-20°C"
+title:"Loading Dye",
+text:"Loading Dye 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"ECL Reagent",
-answer:"4°C"
+title:"ECL Reagent",
+text:"ECL Reagent 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"Paraformaldehyde",
-answer:"4°C"
+title:"Paraformaldehyde",
+text:"Paraformaldehyde 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
-name:"Methanol",
-answer:"Room Temperature"
+title:"Methanol",
+text:"Methanol 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 },
 
 {
-name:"DMSO",
-answer:"Room Temperature"
+title:"DMSO",
+text:"DMSO 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:0
 }
-]
+],
+
 };
 
 const STORAGE_OPTIONS=[
