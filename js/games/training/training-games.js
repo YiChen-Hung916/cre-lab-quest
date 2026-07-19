@@ -210,8 +210,10 @@ answer:0
 13:[
 
 {
-name:"DMEM",
-answer:"4°C"
+title:"DMEM",
+text:"DMEM 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:1
 },
 
 {
@@ -235,13 +237,17 @@ answer:"4°C"
 },
 
 {
-name:"Trypsin",
-answer:"-20°C"
+title:"Trypsin",
+text:"Trypsin 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
-name:"FBS",
-answer:"-20°C"
+title:"FBS",
+text:"FBS 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:2
 },
 
 {
@@ -335,8 +341,10 @@ answer:"-80°C"
 },
 
 {
-name:"Cell Line",
-answer:"Liquid Nitrogen"
+title:"Cell Line",
+text:"Cell line 應保存於？",
+options:MCQ_OPTIONS.storage,
+answer:4
 },
 
 {
@@ -393,13 +401,45 @@ const STORAGE_OPTIONS=[
 "-80°C",
 "Liquid Nitrogen"
 ];
+const MCQ_OPTIONS={
 
+storage:[
+    "Room Temperature",
+    "4°C",
+    "-20°C",
+    "-80°C",
+    "Liquid Nitrogen"
+],
+
+yesno:[
+    "Yes",
+    "No"
+]
+
+};
 function randomChoice(arr){
     return arr[
         Math.floor(
             Math.random()*arr.length
         )
     ];
+}
+
+function shuffle(array){
+
+    const arr=[...array];
+
+    for(let i=arr.length-1;i>0;i--){
+
+        const j=Math.floor(
+            Math.random()*(i+1)
+        );
+
+        [arr[i],arr[j]]=
+        [arr[j],arr[i]];
+
+    }
+    return arr;
 }
 
 function randomInt(min,max){
@@ -587,43 +627,31 @@ ${volume} mL
 }
 
 function generateStockQuestion(){
-
     const stock=randomChoice([
         100,
         200,
         500,
         1000
     ]);
-
     const target=randomChoice([
         10,
         20,
         50
     ]);
-
     const volume=randomChoice([
         10,
         20,
         50
     ]);
-
     return{
-
         title:"Stock Solution",
-
         text:
 `${stock} μM
-
 ↓
-
 ${target} μM
-
 ↓
-
 ${volume} mL
-
 需要加入多少 mL Stock？`,
-
         answer:
             volume*
             target/
@@ -632,6 +660,59 @@ ${volume} mL
         unit:"mL"
 
     };
+}
+
+function getQuestion(level){
+
+    level=Number(level);
+
+    /*
+    ----------------------------------
+    Knowledge
+    ----------------------------------
+    */
+
+    if(level===12){
+
+        const pool=
+            shuffle(
+                QUESTION_BANK[12]
+            );
+
+        return pool[0];
+
+    }
+
+    /*
+    ----------------------------------
+    Storage
+    ----------------------------------
+    */
+
+    if(level===13){
+
+        const pool=
+            shuffle(
+                QUESTION_BANK[13]
+            );
+
+        return pool[0];
+
+    }
+
+    /*
+    ----------------------------------
+    Solution
+    ----------------------------------
+    */
+
+    if(level===14){
+
+        return generateSolutionQuestion();
+
+    }
+
+    return QUESTION_BANK[12][0];
 
 }
 
