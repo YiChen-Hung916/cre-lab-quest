@@ -92,7 +92,7 @@ function buildLevels(){
     if(level<=20){
       out.push({
         level,
-        type:level===20?"boss":"training",
+        type:"training",
         mode:trainingMode(level),
         title:
         level===20
