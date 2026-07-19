@@ -59,6 +59,12 @@ function trainingMode(level){
   if(level<=19){
     return "microscope";
   }
+  /*
+  * Level 20 Boss
+  */
+  if(level===20){
+  return "boss20";
+  }
   return "boss";
 }
 
@@ -90,7 +96,7 @@ function buildLevels(){
         mode:trainingMode(level),
         title:
         level===20
-        ?"新人儀器綜合考核"
+        ?"Boss Mission：Complete Medium"
         :
         level<=4
         ?"Micropipette Training"
@@ -118,7 +124,7 @@ function buildLevels(){
         :
         `新人訓練 ${level}`,
         difficulty:Math.ceil(level/4),
-        rounds:level===20?3:0
+        rounds:level===20?5:0
       });
 
       continue;
