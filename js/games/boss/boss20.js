@@ -16,20 +16,14 @@
  ******************************************************************************/
 
 const Boss20={
-  /*
-   * TrainingGames 物件。
+  /* TrainingGames 物件。
    * 用來沿用既有的：
    * - shell()
-   * - finishRound()
-   */
+   * - finishRound() */
   game:null,
-  /*
-   * Level 20 五回合共用資料。
-   */
+  /* Level 20 五回合共用資料。 */
   state:null,
-  /*
-   * 避免同一次任務重複觸發失敗。
-   */
+  /* 避免同一次任務重複觸發失敗。 */
   missionFailed:false,
   /*
    * 執行中的 timeout。
@@ -89,7 +83,6 @@ const Boss20={
     );
   },
 
-
   /**************************************************************************
    * 重設任務
    **************************************************************************/
@@ -142,19 +135,12 @@ const Boss20={
         id:"boss20-complete-dmem",
         name:"Complete DMEM",
 
-        /*
-         * Round 1 完成前液體由加入試劑的量決定。
-         */
+        /* Round 1 完成前液體由加入試劑的量決定。 */
         currentVolume:0,
-
-        /*
-         * Round 1 成功後會變成 totalVolume。
-         */
+        /* Round 1 成功後會變成 totalVolume。 */
         prepared:false,
 
-        /*
-         * Round 4 完成後寫入。
-         */
+        /* Round 4 完成後寫入。 */
         label:{
           mediumName:"",
           totalVolume:"",
