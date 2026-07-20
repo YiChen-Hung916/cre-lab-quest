@@ -797,9 +797,10 @@ function getQuestion(level){
 
 }
 
-
 const TrainingGames={
+
   mount(ctx){
+
     const map={
       pipette:this.pipette,
       serological:this.serological,
@@ -811,38 +812,139 @@ const TrainingGames={
       labInspection:this.labInspection
     };
 
-    const game=map[ctx.config.mode]||this.pipette;
-    const totalRounds=this.roundCount(ctx.config.level);
+    const game=
+      map[ctx.config.mode]||
+      this.pipette;
+
+    const totalRounds=
+      this.roundCount(
+        ctx.config.level
+      );
+
     let round=1;
 
+    const removeOldHeader=()=>{
+
+      ctx.stage
+        .querySelectorAll(
+          ".training-round-indicator"
+        )
+        .forEach(
+          element=>element.remove()
+        );
+    };
+
+    const returnToMap=()=>{
+
+      const existingBackButton=
+        document.querySelector(
+          [
+            "#backToMap",
+            "#returnToMap",
+            "[data-action='map']",
+            ".back-to-map"
+          ].join(",")
+        );
+
+      if(existingBackButton){
+
+        existingBackButton.click();
+
+        return;
+      }
+
+      /*
+       * 找不到專案內的回到地圖按鈕時，
+       * 使用瀏覽器返回作為備援。
+       */
+      window.history.back();
+    };
+
     const launch=()=>{
+
+      const currentRound=round;
+
       const roundCtx={
         ...ctx,
+
         config:{
           ...ctx.config,
-          roundIndex:round,
+          roundIndex:currentRound,
           totalRounds
         },
+
         complete:()=>{
-          if(round>=totalRounds){
-            ctx.complete();
-          }else{
-            round++;
-            launch();
+
+          /*
+           * 避免舊 Round 的 timeout 重複完成。
+           */
+          if(currentRound!==round){
+            return;
           }
+
+          if(round>=totalRounds){
+
+            ctx.complete();
+
+            return;
+          }
+
+          round++;
+
+          launch();
+        },
+
+        /*
+         * Boss 任務失敗畫面的操作。
+         */
+        abortBoss:options=>{
+
+          const action=
+            options?.action||
+            "map";
+
+          if(action==="restart"){
+
+            round=1;
+
+            if(
+              typeof Boss20!=="undefined"&&
+              typeof Boss20.resetMission===
+                "function"
+            ){
+
+              Boss20.resetMission();
+            }
+
+            launch();
+
+            return;
+          }
+
+          returnToMap();
         }
       };
 
-      game.call(this,roundCtx);
+      removeOldHeader();
+
+      game.call(
+        this,
+        roundCtx
+      );
+
+      /*
+       * 每個 Round render 完成後加入標題。
+       */
       this.addRoundHeader(
         ctx.stage,
-        round,
+        currentRound,
         totalRounds
       );
     };
 
     launch();
   },
+
 
   roundCount(level){
 
@@ -2975,49 +3077,32 @@ boss20DisplayNumber(value){
   );
 },
 
-
 boss20(ctx){
-
-  const round=
-    Number(
-      ctx.config.roundIndex||1
-    );
-
-  /*
-   * 每次重新開始 Level 20 時，
-   * 建立新的隨機任務。
-   */
   if(
-    round===1||
-    !this._boss20State
+    typeof Boss20==="undefined"
   ){
-    this._boss20State=
-      this.createBoss20State();
+
+    ctx.stage.innerHTML=
+      this.shell(
+        "Boss Mission Error",
+        "Boss20 模組尚未載入。",
+        `
+          <div class="notice error">
+            請確認 boss20.js 的 script
+            位於 training-games.js 之前。
+          </div>
+        `
+      );
+
+    return;
   }
 
-  /*
-   * 將共用 state 傳入每個 Round。
-   */
-  ctx.boss20State=
-    this._boss20State;
-
-  const roundMap={
-    1:this.boss20Preparation,
-    2:this.boss20Aliquot,
-    3:this.boss20Centrifuge,
-    4:this.boss20Label,
-    5:this.boss20Inspection
-  };
-
-  const game=
-    roundMap[round]||
-    this.boss20Preparation;
-
-  game.call(
-    this,
-    ctx
+  Boss20.mount(
+    ctx,
+    this
   );
 },
+
 
 
 /******************************************************************************
