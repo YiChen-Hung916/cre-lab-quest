@@ -1422,7 +1422,7 @@ const Boss20={
      * 加入試劑
      **********************************************************************/
 
-    const addReagent=name=>{
+        const addReagent=name=>{
 
       if(
         this.missionFailed||
@@ -1432,61 +1432,26 @@ const Boss20={
       }
 
       /*
-       * 錯誤試劑一旦加入，
-       * 立即結束整個 Boss 任務。
+       * 所有試劑先允許加入。
        *
-       * 不扣 safety。
+       * PBS、Trypsin 雖然是錯誤試劑，
+       * 但玩家在按下「確認配方」前仍可移除。
        */
-      if(wrongReagents.includes(name)){
-
-        selectedReagents.add(name);
-
-        preparation.selectedReagents=
-          [...selectedReagents];
-
-        saveEnteredVolumes();
-
-        updateReagentButtons();
-        updateSelectedList();
-        updateBottle();
-
-        preparation.passed=false;
-
-        this.failMission(
-          ctx,
-          [
-            `將錯誤試劑 ${name} 加入 Complete DMEM。`,
-            "培養基配方已受到污染，無法繼續後續實驗。"
-          ],
-          {
-            penalties:[
-              {
-                metric:"accuracy",
-                amount:100,
-                message:
-                  `錯誤試劑 ${name} 已加入培養基。`
-              },
-              {
-                metric:"sampleQuality",
-                amount:100,
-                message:
-                  "Complete DMEM 配方錯誤，樣本無法使用。"
-              }
-            ]
-          }
-        );
-
-        return;
-      }
-
       selectedReagents.add(name);
 
       preparation.selectedReagents=
         [...selectedReagents];
 
+      saveEnteredVolumes();
+
       updateReagentButtons();
       updateSelectedList();
       updateBottle();
+
+      const isWrongReagent=
+        wrongReagents.includes(
+          name
+        );
 
       setMessage(
         `
@@ -1495,13 +1460,18 @@ const Boss20={
           </strong>
 
           <span>
-            請確認 ${name} 的輸入體積是否正確。
+            ${
+              isWrongReagent
+                ?`${name} 可能不屬於 Complete DMEM 配方；按下確認前可再次點擊移除。`
+                :`請確認 ${name} 的輸入體積是否正確；再次點擊可以移除。`
+            }
           </span>
         `,
-        "success"
+        isWrongReagent
+          ?"warning"
+          :"success"
       );
     };
-
 
     /**********************************************************************
      * 移除試劑
@@ -1732,7 +1702,8 @@ const Boss20={
                 </div>
 
                 <small>
-                  不需要加入的試劑必須輸入 0
+                    未使用的試劑請輸入 0；
+                    小數請四捨五入至小數點後一位
                 </small>
 
               </div>
@@ -1786,6 +1757,17 @@ const Boss20={
                 }
 
               </div>
+              <div class="boss20-input-helper">
+  <strong>輸入規則</strong>
+
+  <span>
+    若計算結果有兩位以上小數，
+    請四捨五入至小數點後一位。
+    例如：8.94 mL → 8.9 mL；
+    8.96 mL → 9.0 mL。
+  </span>
+</div>
+
 
             </section>
 
@@ -2852,12 +2834,11 @@ const Boss20={
 
     ctx.stage.innerHTML=
       this.game.shell(
-        "將 DMEM 加入細胞／離心管",
+        "將 Complete DMEM 加入細胞／離心管",
         `
+          請依照各離心管目標容量，
           使用適當容量的 Serological Pipette，
-          將 Complete DMEM 分裝至所有離心管。
-          請選擇 Tube、選擇 pipette、設定容量，
-          再使用 plunger 完成吸液與排液。
+          設定吸取量後完成吸液與排液。
         `,
 
         `
