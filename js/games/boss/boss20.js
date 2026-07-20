@@ -3912,27 +3912,1609 @@ const Boss20={
   },
 
   
-  /**************************************************************************
+ /**************************************************************************
    * ROUND 3
-   *
-   * Part 4 會取代此暫存函式。
+   * Centrifuge Balance
    **************************************************************************/
 
   round3(ctx){
 
+    const state=
+      this.state;
+
+    state.currentRound=3;
+
+
+    /**********************************************************************
+     * Round 2 未完成時，不允許進入離心步驟
+     **********************************************************************/
+
+    if(
+      !state.transfer||
+      !state.transfer.passed
+    ){
+
+      this.failMission(
+        ctx,
+        [
+          "Round 2 的 Complete DMEM 分裝尚未正確完成。",
+          "無法將未完成的離心管放入離心機。"
+        ],
+        {
+          penalties:[]
+        }
+      );
+
+      return;
+    }
+
+
+    /**********************************************************************
+     * 建立／延續離心狀態
+     **********************************************************************/
+
+    if(!state.centrifuge){
+
+      state.centrifuge={
+
+        passed:false,
+
+        rpm:
+          this.randomInt(
+            1000,
+            1800
+          ),
+
+        time:
+          this.randomInt(
+            3,
+            8
+          ),
+
+        selectedTubeId:null,
+
+        placements:{},
+
+        started:false
+      };
+    }
+
+    const centrifuge=
+      state.centrifuge;
+
+    const tubes=
+      [...state.transfer.tubes]
+        .sort(
+          (first,second)=>
+            first.id-second.id
+        );
+
+    /*
+     * 離心機共有 24 個孔位。
+     *
+     * 孔位編號：
+     * 1～24
+     *
+     * 對向孔位：
+     * 1 ↔ 13
+     * 2 ↔ 14
+     * ...
+     * 12 ↔ 24
+     */
+    const holeCount=24;
+
+    let selectedTubeId=
+      centrifuge.selectedTubeId;
+
+    let locked=false;
+
+
+    /**********************************************************************
+     * 對向孔位
+     **********************************************************************/
+
+    const oppositeHole=hole=>{
+
+      return hole<=12
+        ?hole+12
+        :hole-12;
+    };
+
+
+    /**********************************************************************
+     * 取得 Tube
+     **********************************************************************/
+
+    const getTube=tubeId=>{
+
+      return tubes.find(
+        tube=>tube.id===tubeId
+      )||null;
+    };
+
+
+    /**********************************************************************
+     * 取得某孔位內的 Tube ID
+     **********************************************************************/
+
+    const getTubeAtHole=hole=>{
+
+      const entry=
+        Object.entries(
+          centrifuge.placements
+        )
+        .find(
+          ([,placedHole])=>
+            Number(placedHole)===hole
+        );
+
+      return entry
+        ?Number(entry[0])
+        :null;
+    };
+
+
+    /**********************************************************************
+     * 取得 Tube 所在孔位
+     **********************************************************************/
+
+    const getHoleForTube=tubeId=>{
+
+      const hole=
+        centrifuge.placements[
+          tubeId
+        ];
+
+      return hole===undefined
+        ?null
+        :Number(hole);
+    };
+
+
+    /**********************************************************************
+     * 已放入離心機的 Tube 數量
+     **********************************************************************/
+
+    const placedTubeCount=()=>{
+
+      return Object.keys(
+        centrifuge.placements
+      ).length;
+    };
+
+
+    /**********************************************************************
+     * 所有 Tube 是否都已放入
+     **********************************************************************/
+
+    const allTubesPlaced=()=>{
+
+      return tubes.every(
+        tube=>
+          getHoleForTube(
+            tube.id
+          )!==null
+      );
+    };
+
+
+    /**********************************************************************
+     * 顯示訊息
+     **********************************************************************/
+
+    const setMessage=(
+      message,
+      type=""
+    )=>{
+
+      const box=
+        ctx.stage.querySelector(
+          "#boss20CentrifugeMessage"
+        );
+
+      if(!box){
+        return;
+      }
+
+      box.classList.remove(
+        "success",
+        "warning",
+        "error"
+      );
+
+      if(type){
+        box.classList.add(type);
+      }
+
+      box.innerHTML=message;
+    };
+
+
+    /**********************************************************************
+     * 更新 Tube Rack
+     **********************************************************************/
+
+    const updateTubeRack=()=>{
+
+      ctx.stage
+        .querySelectorAll(
+          "[data-boss20-centrifuge-tube]"
+        )
+        .forEach(
+          button=>{
+
+            const tubeId=
+              Number(
+                button.dataset
+                  .boss20CentrifugeTube
+              );
+
+            const placed=
+              getHoleForTube(
+                tubeId
+              )!==null;
+
+            const selected=
+              selectedTubeId===tubeId;
+
+            button.classList.toggle(
+              "selected",
+              selected
+            );
+
+            button.classList.toggle(
+              "placed",
+              placed
+            );
+
+            button.disabled=
+              locked||
+              placed;
+          }
+        );
+    };
+
+
+    /**********************************************************************
+     * 更新離心孔位
+     **********************************************************************/
+
+    const updateRotor=()=>{
+
+      ctx.stage
+        .querySelectorAll(
+          "[data-boss20-rotor-hole]"
+        )
+        .forEach(
+          button=>{
+
+            const hole=
+              Number(
+                button.dataset
+                  .boss20RotorHole
+              );
+
+            const tubeId=
+              getTubeAtHole(
+                hole
+              );
+
+            const tube=
+              tubeId===null
+                ?null
+                :getTube(tubeId);
+
+            button.classList.toggle(
+              "occupied",
+              tubeId!==null
+            );
+
+            button.disabled=
+              locked;
+
+            const tubeLabel=
+              button.querySelector(
+                ".boss20-rotor-tube-label"
+              );
+
+            const tubeVolume=
+              button.querySelector(
+                ".boss20-rotor-tube-volume"
+              );
+
+            if(tubeId===null){
+
+              if(tubeLabel){
+                tubeLabel.textContent="";
+              }
+
+              if(tubeVolume){
+                tubeVolume.textContent="";
+              }
+
+              return;
+            }
+
+            if(tubeLabel){
+
+              tubeLabel.textContent=
+                `Tube ${tubeId}`;
+            }
+
+            if(tubeVolume&&tube){
+
+              tubeVolume.textContent=
+                `${this.displayNumber(
+                  tube.volume
+                )} mL`;
+            }
+          }
+        );
+    };
+
+
+    /**********************************************************************
+     * 更新已放入數量
+     **********************************************************************/
+
+    const updateProgress=()=>{
+
+      const count=
+        placedTubeCount();
+
+      const progress=
+        ctx.stage.querySelector(
+          "#boss20CentrifugeProgress"
+        );
+
+      if(progress){
+
+        progress.textContent=
+          `${count} / ${tubes.length}`;
+      }
+
+      const fill=
+        ctx.stage.querySelector(
+          "#boss20CentrifugeProgressBar"
+        );
+
+      if(fill){
+
+        fill.style.width=
+          `${
+            tubes.length===0
+              ?0
+              :count/
+                tubes.length*
+                100
+          }%`;
+      }
+    };
+
+
+    /**********************************************************************
+     * 更新目前選擇
+     **********************************************************************/
+
+    const updateSelectionStatus=()=>{
+
+      const status=
+        ctx.stage.querySelector(
+          "#boss20CentrifugeSelection"
+        );
+
+      if(!status){
+        return;
+      }
+
+      if(selectedTubeId===null){
+
+        status.innerHTML=`
+          <strong>
+            尚未選擇離心管
+          </strong>
+
+          <span>
+            請先從 Tube Rack 選擇一支離心管。
+          </span>
+        `;
+
+        return;
+      }
+
+      const tube=
+        getTube(
+          selectedTubeId
+        );
+
+      status.innerHTML=`
+        <strong>
+          已選擇 Tube ${selectedTubeId}
+        </strong>
+
+        <span>
+          容量：
+          ${
+            tube
+              ?this.displayNumber(
+                  tube.volume
+                )
+              :"—"
+          } mL
+        </span>
+
+        <span>
+          請點擊一個空的離心孔位。
+        </span>
+      `;
+    };
+
+
+    /**********************************************************************
+     * 更新全部畫面
+     **********************************************************************/
+
+    const updateAll=()=>{
+
+      updateTubeRack();
+      updateRotor();
+      updateProgress();
+      updateSelectionStatus();
+    };
+
+
+    /**********************************************************************
+     * 移除 Tube
+     **********************************************************************/
+
+    const removeTubeFromHole=hole=>{
+
+      const tubeId=
+        getTubeAtHole(
+          hole
+        );
+
+      if(tubeId===null){
+        return;
+      }
+
+      delete centrifuge.placements[
+        tubeId
+      ];
+
+      selectedTubeId=null;
+
+      centrifuge.selectedTubeId=null;
+
+      updateAll();
+
+      setMessage(
+        `
+          <strong>
+            Tube ${tubeId} 已移回 Tube Rack
+          </strong>
+
+          <span>
+            請重新選擇適當孔位。
+          </span>
+        `,
+        "warning"
+      );
+    };
+
+
+    /**********************************************************************
+     * 放置 Tube
+     **********************************************************************/
+
+    const placeTubeAtHole=hole=>{
+
+      if(selectedTubeId===null){
+
+        setMessage(
+          `
+            <strong>
+              尚未選擇 Tube
+            </strong>
+
+            <span>
+              請先從 Tube Rack 選擇離心管。
+            </span>
+          `,
+          "warning"
+        );
+
+        return;
+      }
+
+      if(
+        getTubeAtHole(
+          hole
+        )!==null
+      ){
+
+        setMessage(
+          `
+            <strong>
+              孔位 ${hole} 已被使用
+            </strong>
+
+            <span>
+              請選擇其他空孔位。
+            </span>
+          `,
+          "warning"
+        );
+
+        return;
+      }
+
+      centrifuge.placements[
+        selectedTubeId
+      ]=
+        hole;
+
+      const placedTubeId=
+        selectedTubeId;
+
+      selectedTubeId=null;
+
+      centrifuge.selectedTubeId=null;
+
+      updateAll();
+
+      setMessage(
+        `
+          <strong>
+            Tube ${placedTubeId} 已放入孔位 ${hole}
+          </strong>
+
+          <span>
+            對向孔位為
+            ${oppositeHole(hole)}。
+          </span>
+        `,
+        "success"
+      );
+    };
+
+
+    /**********************************************************************
+     * 檢查配平
+     *
+     * 規則：
+     * 1. 每一支 Tube 都必須有對向 Tube。
+     * 2. 對向 Tube 的容量必須相同。
+     * 3. 所有 Tube 都必須放入。
+     **********************************************************************/
+
+    const validateBalance=()=>{
+
+      const errors=[];
+
+      if(!allTubesPlaced()){
+
+        errors.push(
+          `尚有 ${
+            tubes.length-
+            placedTubeCount()
+          } 支離心管未放入離心機。`
+        );
+      }
+
+      const checkedHoles=
+        new Set();
+
+      for(
+        let hole=1;
+        hole<=holeCount;
+        hole++
+      ){
+
+        if(checkedHoles.has(hole)){
+          continue;
+        }
+
+        const opposite=
+          oppositeHole(hole);
+
+        checkedHoles.add(hole);
+        checkedHoles.add(opposite);
+
+        const firstTubeId=
+          getTubeAtHole(hole);
+
+        const secondTubeId=
+          getTubeAtHole(opposite);
+
+        /*
+         * 兩側都空，不需檢查。
+         */
+        if(
+          firstTubeId===null&&
+          secondTubeId===null
+        ){
+          continue;
+        }
+
+        /*
+         * 只有單側有 Tube。
+         */
+        if(
+          firstTubeId===null||
+          secondTubeId===null
+        ){
+
+          const occupiedHole=
+            firstTubeId!==null
+              ?hole
+              :opposite;
+
+          const missingHole=
+            firstTubeId!==null
+              ?opposite
+              :hole;
+
+          const tubeId=
+            firstTubeId!==null
+              ?firstTubeId
+              :secondTubeId;
+
+          errors.push(
+            `Tube ${tubeId} 位於孔位 ${occupiedHole}，但對向孔位 ${missingHole} 為空。`
+          );
+
+          continue;
+        }
+
+        const firstTube=
+          getTube(firstTubeId);
+
+        const secondTube=
+          getTube(secondTubeId);
+
+        if(
+          !firstTube||
+          !secondTube
+        ){
+
+          errors.push(
+            `孔位 ${hole} 與 ${opposite} 的 Tube 資料異常。`
+          );
+
+          continue;
+        }
+
+        /*
+         * 對向 Tube 的體積必須相同。
+         */
+        if(
+          !this.approximatelyEqual(
+            firstTube.volume,
+            secondTube.volume,
+            .1
+          )
+        ){
+
+          errors.push(
+            `孔位 ${hole} 的 Tube ${firstTubeId} 為 ${this.displayNumber(
+              firstTube.volume
+            )} mL，但對向孔位 ${opposite} 的 Tube ${secondTubeId} 為 ${this.displayNumber(
+              secondTube.volume
+            )} mL。`
+          );
+        }
+      }
+
+      return errors;
+    };
+
+
+    /**********************************************************************
+     * 建立 Rotor 孔位
+     **********************************************************************/
+
+    const rotorHolesHtml=
+      Array.from(
+        {
+          length:holeCount
+        },
+        (_,index)=>index+1
+      )
+      .map(
+        hole=>{
+
+          const angle=
+            (
+              hole-1
+            )*
+            (
+              360/
+              holeCount
+            );
+
+          const tubeId=
+            getTubeAtHole(
+              hole
+            );
+
+          const tube=
+            tubeId===null
+              ?null
+              :getTube(tubeId);
+
+          return `
+            <button
+              type="button"
+              class="
+                boss20-rotor-hole
+                ${
+                  tubeId!==null
+                    ?"occupied"
+                    :""
+                }
+              "
+              data-boss20-rotor-hole="${hole}"
+              style="
+                --rotor-angle:${angle}deg;
+              "
+              aria-label="Rotor hole ${hole}"
+            >
+
+              <span class="boss20-hole-number">
+                ${hole}
+              </span>
+
+              <span class="boss20-rotor-tube">
+
+                <strong class="boss20-rotor-tube-label">
+                  ${
+                    tubeId!==null
+                      ?`Tube ${tubeId}`
+                      :""
+                  }
+                </strong>
+
+                <small class="boss20-rotor-tube-volume">
+                  ${
+                    tube
+                      ?`${this.displayNumber(
+                          tube.volume
+                        )} mL`
+                      :""
+                  }
+                </small>
+
+              </span>
+
+            </button>
+          `;
+        }
+      )
+      .join("");
+
+
+    /**********************************************************************
+     * 建立 Tube Rack
+     *
+     * 顯示順序：
+     *
+     * Tube 1   Tube 2
+     * Tube 3   Tube 4
+     * Tube 5   Tube 6
+     *
+     * 奇數在左，偶數在右。
+     **********************************************************************/
+
+    const tubeRackHtml=
+      tubes
+        .map(
+          tube=>{
+
+            const placed=
+              getHoleForTube(
+                tube.id
+              )!==null;
+
+            return `
+              <button
+                type="button"
+                class="
+                  boss20-centrifuge-tube
+                  ${placed?"placed":""}
+                  ${
+                    selectedTubeId===tube.id
+                      ?"selected"
+                      :""
+                  }
+                "
+                data-boss20-centrifuge-tube="${tube.id}"
+                ${placed?"disabled":""}
+              >
+
+                <span class="boss20-centrifuge-tube-visual">
+
+                  <span class="boss20-tube-cap"></span>
+
+                  <span class="boss20-tube-body">
+
+                    <span
+                      class="boss20-tube-liquid"
+                      style="
+                        height:${
+                          Math.max(
+                            15,
+                            Math.min(
+                              82,
+                              tube.volume/
+                              50*
+                              82
+                            )
+                          )
+                        }%;
+                      "
+                    ></span>
+
+                  </span>
+
+                </span>
+
+                <span class="boss20-centrifuge-tube-info">
+
+                  <strong>
+                    Tube ${tube.id}
+                  </strong>
+
+                  <small>
+                    ${this.displayNumber(
+                      tube.volume
+                    )} mL
+                  </small>
+
+                  <small>
+                    ${
+                      placed
+                        ?`Hole ${
+                            getHoleForTube(
+                              tube.id
+                            )
+                          }`
+                        :"Ready"
+                    }
+                  </small>
+
+                </span>
+
+              </button>
+            `;
+          }
+        )
+        .join("");
+
+
+    /**********************************************************************
+     * Round 3 主畫面
+     **********************************************************************/
+
     ctx.stage.innerHTML=
       this.game.shell(
-        "Boss20 Round 3",
-        "Round 3 尚未貼入。",
+        "Centrifuge Balance",
+
         `
-          <div class="notice">
-            請接續貼上 boss20.js Part 4。
+          將所有離心管放入 24 孔離心轉子。
+          每一支離心管必須在正對面放置一支相同體積的離心管，
+          再設定正確的 RPM 與離心時間。
+        `,
+
+        `
+          <div class="boss20-round boss20-round3">
+
+            <section class="boss20-centrifuge-summary">
+
+              <div class="boss20-centrifuge-progress-card">
+
+                <span class="kicker">
+                  TUBES LOADED
+                </span>
+
+                <strong id="boss20CentrifugeProgress">
+                  ${placedTubeCount()} / ${tubes.length}
+                </strong>
+
+                <div class="boss20-progress-track">
+
+                  <div
+                    id="boss20CentrifugeProgressBar"
+                    class="boss20-progress-fill"
+                    style="
+                      width:${
+                        tubes.length===0
+                          ?0
+                          :placedTubeCount()/
+                            tubes.length*
+                            100
+                      }%;
+                    "
+                  ></div>
+
+                </div>
+
+              </div>
+
+
+              <div
+                id="boss20CentrifugeSelection"
+                class="boss20-centrifuge-selection"
+              ></div>
+
+
+              <div class="boss20-centrifuge-target">
+
+                <span class="kicker">
+                  CENTRIFUGE SETTING
+                </span>
+
+                <strong>
+                  ${centrifuge.rpm} RPM
+                </strong>
+
+                <span>
+                  ${centrifuge.time} min
+                </span>
+
+              </div>
+
+            </section>
+
+
+            <div class="boss20-centrifuge-layout">
+
+              <section class="boss20-centrifuge-rack-panel">
+
+                <div class="boss20-section-heading">
+
+                  <div>
+
+                    <span class="kicker">
+                      TUBE RACK
+                    </span>
+
+                    <strong>
+                      選擇離心管
+                    </strong>
+
+                  </div>
+
+                  <small>
+                    奇數在左，偶數在右
+                  </small>
+
+                </div>
+
+                <div class="boss20-centrifuge-tube-grid">
+                  ${tubeRackHtml}
+                </div>
+
+              </section>
+
+
+              <section class="boss20-rotor-panel">
+
+                <div class="boss20-section-heading">
+
+                  <div>
+
+                    <span class="kicker">
+                      24-HOLE ROTOR
+                    </span>
+
+                    <strong>
+                      點擊孔位放入 Tube
+                    </strong>
+
+                  </div>
+
+                  <small>
+                    再次點擊已使用孔位可取出
+                  </small>
+
+                </div>
+
+                <div class="boss20-rotor-shell">
+
+                  <div class="boss20-rotor-center">
+
+                    <span>
+                      CENTRIFUGE
+                    </span>
+
+                    <strong>
+                      24
+                    </strong>
+
+                    <small>
+                      HOLES
+                    </small>
+
+                  </div>
+
+                  <div class="boss20-rotor-disc">
+                    ${rotorHolesHtml}
+                  </div>
+
+                </div>
+
+              </section>
+
+            </div>
+
+
+            <section class="boss20-centrifuge-controls">
+
+              <div class="boss20-section-heading">
+
+                <div>
+
+                  <span class="kicker">
+                    MACHINE SETTINGS
+                  </span>
+
+                  <strong>
+                    設定離心參數
+                  </strong>
+
+                </div>
+
+                <small>
+                  請依照上方指定條件設定
+                </small>
+
+              </div>
+
+
+              <div class="boss20-setting-grid">
+
+                <label class="boss20-setting-field">
+
+                  <span>
+                    RPM
+                  </span>
+
+                  <div class="boss20-number-input">
+
+                    <input
+                      type="number"
+                      id="boss20CentrifugeRpm"
+                      min="500"
+                      max="5000"
+                      step="100"
+                      inputmode="numeric"
+                      value=""
+                      placeholder="輸入 RPM"
+                    >
+
+                    <span>
+                      RPM
+                    </span>
+
+                  </div>
+
+                </label>
+
+
+                <label class="boss20-setting-field">
+
+                  <span>
+                    Time
+                  </span>
+
+                  <div class="boss20-number-input">
+
+                    <input
+                      type="number"
+                      id="boss20CentrifugeTime"
+                      min="1"
+                      max="30"
+                      step="1"
+                      inputmode="numeric"
+                      value=""
+                      placeholder="輸入時間"
+                    >
+
+                    <span>
+                      min
+                    </span>
+
+                  </div>
+
+                </label>
+
+              </div>
+
+            </section>
+
+
+            <div
+              id="boss20CentrifugeMessage"
+              class="notice"
+              aria-live="polite"
+            >
+              請先選擇 Tube，再將 Tube 放入適當孔位。
+            </div>
+
+
+            <div class="controls">
+
+              <button
+                type="button"
+                id="boss20StartCentrifuge"
+                class="btn btn-primary btn-large"
+              >
+                關閉上蓋並開始離心
+              </button>
+
+            </div>
+
           </div>
         `
       );
+
+
+    /**********************************************************************
+     * 初始化畫面
+     **********************************************************************/
+
+    updateAll();
+
+
+    /**********************************************************************
+     * 選擇 Tube
+     **********************************************************************/
+
+    ctx.stage
+      .querySelectorAll(
+        "[data-boss20-centrifuge-tube]"
+      )
+      .forEach(
+        button=>{
+
+          button.addEventListener(
+            "click",
+            ()=>{
+
+              if(
+                locked||
+                this.missionFailed
+              ){
+                return;
+              }
+
+              const tubeId=
+                Number(
+                  button.dataset
+                    .boss20CentrifugeTube
+                );
+
+              if(
+                getHoleForTube(
+                  tubeId
+                )!==null
+              ){
+                return;
+              }
+
+              /*
+               * 再次點擊同一支 Tube，
+               * 取消選取。
+               */
+              if(selectedTubeId===tubeId){
+
+                selectedTubeId=null;
+
+                centrifuge.selectedTubeId=
+                  null;
+
+                updateAll();
+
+                setMessage(
+                  "已取消選取離心管。",
+                  "warning"
+                );
+
+                return;
+              }
+
+              selectedTubeId=
+                tubeId;
+
+              centrifuge.selectedTubeId=
+                tubeId;
+
+              updateAll();
+
+              const tube=
+                getTube(
+                  tubeId
+                );
+
+              setMessage(
+                `
+                  <strong>
+                    已選擇 Tube ${tubeId}
+                  </strong>
+
+                  <span>
+                    容量為 ${
+                      tube
+                        ?this.displayNumber(
+                            tube.volume
+                          )
+                        :"—"
+                    } mL。
+                    請選擇一個空孔位。
+                  </span>
+                `,
+                "success"
+              );
+            }
+          );
+        }
+      );
+
+
+    /**********************************************************************
+     * Rotor 孔位點擊
+     **********************************************************************/
+
+    ctx.stage
+      .querySelectorAll(
+        "[data-boss20-rotor-hole]"
+      )
+      .forEach(
+        button=>{
+
+          button.addEventListener(
+            "click",
+            ()=>{
+
+              if(
+                locked||
+                this.missionFailed
+              ){
+                return;
+              }
+
+              const hole=
+                Number(
+                  button.dataset
+                    .boss20RotorHole
+                );
+
+              /*
+               * 點擊已有 Tube 的孔位：
+               * 將該 Tube 移回 Rack。
+               */
+              if(
+                getTubeAtHole(
+                  hole
+                )!==null
+              ){
+
+                removeTubeFromHole(
+                  hole
+                );
+
+                return;
+              }
+
+              placeTubeAtHole(
+                hole
+              );
+            }
+          );
+        }
+      );
+
+
+    /**********************************************************************
+     * 開始離心
+     **********************************************************************/
+
+    const startButton=
+      ctx.stage.querySelector(
+        "#boss20StartCentrifuge"
+      );
+
+    startButton.addEventListener(
+      "click",
+      ()=>{
+
+        if(
+          locked||
+          this.missionFailed
+        ){
+          return;
+        }
+
+        const enteredRpm=
+          Number(
+            ctx.stage.querySelector(
+              "#boss20CentrifugeRpm"
+            ).value
+          );
+
+        const enteredTime=
+          Number(
+            ctx.stage.querySelector(
+              "#boss20CentrifugeTime"
+            ).value
+          );
+
+
+        /******************************************************************
+         * 欄位未填
+         ******************************************************************/
+
+        if(
+          !Number.isFinite(
+            enteredRpm
+          )||
+          enteredRpm<=0
+        ){
+
+          setMessage(
+            `
+              <strong>
+                請輸入 RPM
+              </strong>
+
+              <span>
+                必須先設定離心轉速。
+              </span>
+            `,
+            "warning"
+          );
+
+          return;
+        }
+
+        if(
+          !Number.isFinite(
+            enteredTime
+          )||
+          enteredTime<=0
+        ){
+
+          setMessage(
+            `
+              <strong>
+                請輸入離心時間
+              </strong>
+
+              <span>
+                必須先設定離心時間。
+              </span>
+            `,
+            "warning"
+          );
+
+          return;
+        }
+
+
+        /******************************************************************
+         * 檢查配平
+         ******************************************************************/
+
+        const balanceErrors=
+          validateBalance();
+
+        if(balanceErrors.length>0){
+
+          centrifuge.passed=false;
+
+          this.failMission(
+            ctx,
+            [
+              ...balanceErrors,
+              "離心機未正確配平，啟動後可能劇烈震動或損壞。"
+            ],
+            {
+              penalties:[
+                {
+                  metric:"accuracy",
+                  amount:100,
+                  message:
+                    "離心管配置不正確。"
+                },
+                {
+                  metric:"sampleQuality",
+                  amount:100,
+                  message:
+                    "離心失衡可能造成樣本混濁、洩漏或損失。"
+                },
+                {
+                  metric:"safety",
+                  amount:100,
+                  message:
+                    "未配平離心機可能造成設備損壞或人員受傷。"
+                }
+              ]
+            }
+          );
+
+          return;
+        }
+
+
+        /******************************************************************
+         * RPM 錯誤
+         ******************************************************************/
+
+        if(
+          enteredRpm!==
+          centrifuge.rpm
+        ){
+
+          centrifuge.passed=false;
+
+          this.failMission(
+            ctx,
+            [
+              `指定轉速為 ${centrifuge.rpm} RPM。`,
+              `實際設定為 ${enteredRpm} RPM。`
+            ],
+            {
+              penalties:[
+                {
+                  metric:"accuracy",
+                  amount:100,
+                  message:
+                    "離心機 RPM 設定錯誤。"
+                },
+                {
+                  metric:"sampleQuality",
+                  amount:100,
+                  message:
+                    "錯誤轉速可能造成離心效果不足或樣本受損。"
+                }
+              ]
+            }
+          );
+
+          return;
+        }
+
+
+        /******************************************************************
+         * 時間錯誤
+         ******************************************************************/
+
+        if(
+          enteredTime!==
+          centrifuge.time
+        ){
+
+          centrifuge.passed=false;
+
+          this.failMission(
+            ctx,
+            [
+              `指定離心時間為 ${centrifuge.time} 分鐘。`,
+              `實際設定為 ${enteredTime} 分鐘。`
+            ],
+            {
+              penalties:[
+                {
+                  metric:"accuracy",
+                  amount:100,
+                  message:
+                    "離心時間設定錯誤。"
+                },
+                {
+                  metric:"sampleQuality",
+                  amount:100,
+                  message:
+                    "錯誤離心時間可能造成樣本處理不完整。"
+                }
+              ]
+            }
+          );
+
+          return;
+        }
+
+
+        /******************************************************************
+         * 正確啟動離心機
+         ******************************************************************/
+
+        locked=true;
+
+        centrifuge.started=true;
+
+        startButton.disabled=true;
+
+        ctx.stage
+          .querySelectorAll(
+            "button,input"
+          )
+          .forEach(
+            control=>{
+
+              control.disabled=true;
+            }
+          );
+
+        const rotor=
+          ctx.stage.querySelector(
+            ".boss20-rotor-disc"
+          );
+
+        if(rotor){
+
+          rotor.classList.add(
+            "spinning"
+          );
+        }
+
+        setMessage(
+          `
+            <strong>
+              離心機運轉中
+            </strong>
+
+            <span>
+              ${centrifuge.rpm} RPM，
+              ${centrifuge.time} 分鐘。
+            </span>
+          `,
+          "success"
+        );
+
+        this.setTimer(
+          ()=>{
+
+            if(rotor){
+
+              rotor.classList.remove(
+                "spinning"
+              );
+
+              rotor.classList.add(
+                "finished"
+              );
+            }
+
+            centrifuge.passed=true;
+
+            setMessage(
+              `
+                <strong>
+                  離心完成
+                </strong>
+
+                <span>
+                  所有離心管已正確配平，
+                  並完成 ${centrifuge.rpm} RPM、
+                  ${centrifuge.time} 分鐘離心。
+                </span>
+              `,
+              "success"
+            );
+
+            this.completeRound(
+              ctx,
+              900
+            );
+          },
+          1800
+        );
+      }
+    );
   },
 
-
+  
   /**************************************************************************
    * ROUND 4
    *
