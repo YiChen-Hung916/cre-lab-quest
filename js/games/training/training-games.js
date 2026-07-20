@@ -3011,9 +3011,7 @@ boss20BottleHtml(
             ${total} mL
           </span>
 
-          <span>
-            10% FBS
-          </span>
+          <span>10% FBS</span>
 
           <span>
             1% Pen/Strep
