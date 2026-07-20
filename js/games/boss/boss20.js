@@ -2746,7 +2746,6 @@ const Boss20={
         );
 
       if(liquid){
-
         liquid.style.height=
           `${fillPercent}%`;
       }
@@ -2760,9 +2759,7 @@ const Boss20={
       }
 
       if(Tube.filled){
-
         button.disabled=true;
-
         button.classList.add(
           "filled"
         );
@@ -2779,19 +2776,12 @@ const Boss20={
      **********************************************************************/
 
     const resetTransferControls=()=>{
-
       selectedTubeId=null;
-
       transfer.selectedTubeId=null;
-
       selectedPipette=null;
-
       transfer.selectedPipette=null;
-
       dialVolume=0;
-
       transfer.setVolume=0;
-
       plungerState="ready";
 
       updateTubeButtons();
@@ -2803,10 +2793,8 @@ const Boss20={
 
 
     /**********************************************************************
-     * 建立 Tube Rack
-     *
+     * 建立 Tube Rack，
      * 排列：
-     *
      * Tube 1   Tube 2
      * Tube 3   Tube 4
      * Tube 5   Tube 6
@@ -2832,9 +2820,7 @@ const Boss20={
             >
 
               <span class="boss20-tube-cap"></span>
-
               <span class="boss20-tube-body">
-
                 <span
                   class="boss20-tube-liquid"
                   style="
@@ -2851,7 +2837,6 @@ const Boss20={
                     }%;
                   "
                 ></span>
-
                 <strong>
                   Tube ${tube.id}
                 </strong>
@@ -2871,7 +2856,6 @@ const Boss20={
                 </small>
 
               </span>
-
             </button>
           `
         )
@@ -2885,7 +2869,6 @@ const Boss20={
     ctx.stage.innerHTML=
       this.game.shell(
         "將 DMEM 加入細胞／離心管",
-
         `
           使用適當容量的 Serological Pipette，
           將 Complete DMEM 分裝至所有離心管。
@@ -2895,15 +2878,11 @@ const Boss20={
 
         `
           <div class="boss20-round boss20-round2">
-
             <section class="boss20-transfer-header">
-
               <div class="boss20-transfer-progress-card">
-
                 <span class="kicker">
                   ALIQUOT PROGRESS
                 </span>
-
                 <strong id="boss20TransferProgress">
                   ${
                     tubes.filter(
@@ -2915,7 +2894,6 @@ const Boss20={
                 </strong>
 
                 <div class="boss20-progress-track">
-
                   <div
                     id="boss20TransferProgressBar"
                     class="boss20-progress-fill"
@@ -2931,9 +2909,7 @@ const Boss20={
                       }%;
                     "
                   ></div>
-
                 </div>
-
               </div>
 
               <div
@@ -2943,15 +2919,11 @@ const Boss20={
 
             </section>
 
-
             <div class="boss20-transfer-layout">
-
               <section class="boss20-transfer-source">
-
                 <span class="kicker">
                   COMPLETE DMEM
                 </span>
-
                 <div
                   id="boss20TransferBottle"
                   class="boss20-transfer-bottle"
@@ -2987,7 +2959,6 @@ const Boss20={
                     <span class="kicker">
                       TUBE RACK
                     </span>
-
                     <strong>
                       選擇一支離心管
                     </strong>
@@ -2996,7 +2967,6 @@ const Boss20={
                   <small>
                     Tube 依編號由左至右排列
                   </small>
-
                 </div>
 
                 <div class="boss20-tube-rack-grid">
@@ -6470,8 +6440,7 @@ const Boss20={
                 {
                   metric:"sampleQuality",
                   amount:100,
-                  message:
-                    "錯誤標籤可能造成培養基誤用或保存條件錯誤。"
+                  message:"錯誤標籤可能造成培養基誤用或保存條件錯誤。"
                 },
                 {
                   metric:"safety",
@@ -6527,7 +6496,6 @@ const Boss20={
           )
           .forEach(
             control=>{
-
               control.disabled=true;
             }
           );
