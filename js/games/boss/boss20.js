@@ -16,26 +16,21 @@
  ******************************************************************************/
 
 const Boss20={
-
   /*
    * TrainingGames 物件。
-   *
    * 用來沿用既有的：
    * - shell()
    * - finishRound()
    */
   game:null,
-
   /*
    * Level 20 五回合共用資料。
    */
   state:null,
-
   /*
    * 避免同一次任務重複觸發失敗。
    */
   missionFailed:false,
-
   /*
    * 執行中的 timeout。
    *
@@ -44,53 +39,38 @@ const Boss20={
    */
   timers:new Set(),
 
-
   /**************************************************************************
    * Boss 入口
    **************************************************************************/
 
   mount(ctx,game){
-
     this.game=game;
-
     const round=
       Number(
         ctx.config.roundIndex||1
       );
-
     /*
      * Round 1 表示新任務開始。
      */
     if(
       round===1||
       !this.state
-    ){
-      this.resetMission();
-    }
+    ){this.resetMission();}
 
-    /*
-     * 若前一回合已經失敗，
-     * 不應再載入後續回合。
-     */
+    /* 若前一回合已經失敗，不應再載入後續回合。 */
+
     if(this.missionFailed){
       this.renderFailedState(
         ctx,
-        this.state?.failureReasons||[
-          "Boss mission has already failed."
-        ]
+        this.state?.failureReasons||["Boss mission has already failed." ]
       );
-
       return;
     }
 
-    /*
-     * 讓各回合可以從 ctx 取得共用 state。
-     */
-    ctx.boss20State=
-      this.state;
+    /* 讓各回合可以從 ctx 取得共用 state。 */
 
-    ctx.boss20Round=
-      round;
+    ctx.boss20State=this.state;
+    ctx.boss20Round=round;
 
     const roundMap={
       1:this.round1,
@@ -100,8 +80,7 @@ const Boss20={
       5:this.round5
     };
 
-    const roundGame=
-      roundMap[round]||
+    const roundGame=roundMap[round]||
       this.round1;
 
     roundGame.call(
@@ -118,26 +97,17 @@ const Boss20={
   resetMission(){
 
     this.clearTimers();
-
     this.missionFailed=false;
-
-    this.state=
-      this.createState();
+    this.state=this.createState();
   },
-
 
   /**************************************************************************
    * 建立五回合共用資料
    **************************************************************************/
 
   createState(){
-
-    /*
-     * 為了讓每兩支 tube 容量相同，
-     * 最終容量使用偶數。
-     *
-     * 範圍仍為 100–1000 mL。
-     */
+    /* 為了讓每兩支 tube 容量相同，最終容量使用偶數。
+     * 範圍仍為 100–1000 mL。 */
     const totalVolume=
       this.randomEvenInt(
         100,
@@ -145,44 +115,29 @@ const Boss20={
       );
 
     const formula={
-
       DMEM:
-        this.roundOneDecimal(
-          totalVolume*.89
-        ),
-
+        this.roundOneDecimal(totalVolume*.89),
       FBS:
-        this.roundOneDecimal(
-          totalVolume*.10
-        ),
-
+        this.roundOneDecimal(totalVolume*.10),
       "Pen/Strep":
-        this.roundOneDecimal(
-          totalVolume*.01
-        ),
-
+        this.roundOneDecimal(totalVolume*.01),
       PBS:0,
-
       Trypsin:0
     };
 
-    /*
-     * Round 2 與 Round 3 使用同一批 tubes。
-     */
+    /* Round 2 與 Round 3 使用同一批 tubes。 */
+
     const tubes=
       this.createTubePairs(
         totalVolume
       );
 
     return{
-
       totalVolume,
-
       formula,
 
-      /*
-       * 同一瓶 Complete DMEM。
-       */
+      /* 同一瓶 Complete DMEM。 */
+      
       bottle:{
         id:"boss20-complete-dmem",
         name:"Complete DMEM",
@@ -276,7 +231,6 @@ const Boss20={
 
   /**************************************************************************
    * 建立 Round 2 / Round 3 共用離心管
-   *
    * 規則：
    * - 每支 tube 容量 1–50 mL
    * - 每兩支 tube 具有相同容量
@@ -287,29 +241,17 @@ const Boss20={
 
   createTubePairs(totalVolume){
 
-    /*
-     * 一對 tube 會消耗：
-     *
-     * pairVolume × 2
-     *
-     * 因此只需要把總容量的一半拆分。
-     */
+    /* 一對 tube 會消耗：pairVolume × 2，
+     * 因此只需要把總容量的一半拆分。 */
     const halfVolume=
       totalVolume/2;
 
-    /*
-     * 每個 pairVolume 最大 50 mL。
-     */
+    /* 每個 pairVolume 最大 50 mL。 */  
     const minimumPairCount=
-      Math.ceil(
-        halfVolume/50
-      );
+      Math.ceil(halfVolume/50);
 
-    /*
-     * 最多增加兩組，使容量組合更隨機。
-     *
-     * 但每組至少必須有 1 mL。
-     */
+    /* 最多增加兩組，使容量組合更隨機。
+     * 但每組至少必須有 1 mL。 */     
     const maximumPairCount=
       Math.min(
         Math.floor(halfVolume),
@@ -369,8 +311,7 @@ const Boss20={
   /**************************************************************************
    * 將 total 拆成 count 份
    *
-   * 每份：
-   * min ≤ value ≤ max
+   * 每份：min ≤ value ≤ max
    **************************************************************************/
 
   partitionVolume(
@@ -410,9 +351,7 @@ const Boss20={
 
       /*
        * 目前這一份可以使用的最小值。
-       *
-       * 必須確保剩下的容量不會超過：
-       * 剩餘份數 × max。
+       * 必須確保剩下的容量不會超過：剩餘份數 × max。
        */
       const currentMinimum=
         Math.max(
