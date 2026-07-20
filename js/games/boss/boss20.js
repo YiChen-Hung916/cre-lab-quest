@@ -512,9 +512,7 @@ const Boss20={
 
             <div class="boss20-failure-reasons">
 
-              <strong>
-                Failure reason
-              </strong>
+              <strong>Failure reason</strong>
 
               <ul>
                 ${
@@ -3865,7 +3863,6 @@ const Boss20={
     if(!state.centrifuge){
 
       state.centrifuge={
-
         passed:false,
 
         rpm:
@@ -3881,9 +3878,7 @@ const Boss20={
           ),
 
         selectedTubeId:null,
-
         placements:{},
-
         started:false
       };
     }
@@ -3923,7 +3918,6 @@ const Boss20={
      **********************************************************************/
 
     const oppositeHole=hole=>{
-
       return hole<=12
         ?hole+12
         :hole-12;
@@ -3935,7 +3929,6 @@ const Boss20={
      **********************************************************************/
 
     const getTube=tubeId=>{
-
       return tubes.find(
         tube=>tube.id===tubeId
       )||null;
@@ -3947,7 +3940,6 @@ const Boss20={
      **********************************************************************/
 
     const getTubeAtHole=hole=>{
-
       const entry=
         Object.entries(
           centrifuge.placements
@@ -3956,7 +3948,6 @@ const Boss20={
           ([,placedHole])=>
             Number(placedHole)===hole
         );
-
       return entry
         ?Number(entry[0])
         :null;
@@ -3968,12 +3959,10 @@ const Boss20={
      **********************************************************************/
 
     const getHoleForTube=tubeId=>{
-
       const hole=
         centrifuge.placements[
           tubeId
         ];
-
       return hole===undefined
         ?null
         :Number(hole);
@@ -3985,7 +3974,6 @@ const Boss20={
      **********************************************************************/
 
     const placedTubeCount=()=>{
-
       return Object.keys(
         centrifuge.placements
       ).length;
@@ -3997,7 +3985,6 @@ const Boss20={
      **********************************************************************/
 
     const allTubesPlaced=()=>{
-
       return tubes.every(
         tube=>
           getHoleForTube(
@@ -4145,13 +4132,11 @@ const Boss20={
             }
 
             if(tubeLabel){
-
               tubeLabel.textContent=
                 `Tube ${tubeId}`;
             }
 
             if(tubeVolume&&tube){
-
               tubeVolume.textContent=
                 `${this.displayNumber(
                   tube.volume
@@ -4177,7 +4162,6 @@ const Boss20={
         );
 
       if(progress){
-
         progress.textContent=
           `${count} / ${tubes.length}`;
       }
@@ -4188,7 +4172,6 @@ const Boss20={
         );
 
       if(fill){
-
         fill.style.width=
           `${
             tubes.length===0
@@ -4206,7 +4189,6 @@ const Boss20={
      **********************************************************************/
 
     const updateSelectionStatus=()=>{
-
       const status=
         ctx.stage.querySelector(
           "#boss20CentrifugeSelection"
@@ -4217,15 +4199,9 @@ const Boss20={
       }
 
       if(selectedTubeId===null){
-
         status.innerHTML=`
-          <strong>
-            尚未選擇離心管
-          </strong>
-
-          <span>
-            請先從 Tube Rack 選擇一支離心管。
-          </span>
+          <strong>尚未選擇離心管</strong>
+          <span>請先從 Tube Rack 選擇一支離心管。</span>
         `;
 
         return;
@@ -4237,10 +4213,7 @@ const Boss20={
         );
 
       status.innerHTML=`
-        <strong>
-          已選擇 Tube ${selectedTubeId}
-        </strong>
-
+        <strong>已選擇 Tube ${selectedTubeId}</strong>
         <span>
           容量：
           ${
@@ -4252,9 +4225,7 @@ const Boss20={
           } mL
         </span>
 
-        <span>
-          請點擊一個空的離心孔位。
-        </span>
+        <span>請點擊一個空的離心孔位。</span>
       `;
     };
 
@@ -4264,7 +4235,6 @@ const Boss20={
      **********************************************************************/
 
     const updateAll=()=>{
-
       updateTubeRack();
       updateRotor();
       updateProgress();
@@ -4277,7 +4247,6 @@ const Boss20={
      **********************************************************************/
 
     const removeTubeFromHole=hole=>{
-
       const tubeId=
         getTubeAtHole(
           hole
@@ -4299,13 +4268,8 @@ const Boss20={
 
       setMessage(
         `
-          <strong>
-            Tube ${tubeId} 已移回 Tube Rack
-          </strong>
-
-          <span>
-            請重新選擇適當孔位。
-          </span>
+          <strong>Tube ${tubeId} 已移回 Tube Rack</strong>
+          <span>請重新選擇適當孔位。</span>
         `,
         "warning"
       );
@@ -4319,16 +4283,10 @@ const Boss20={
     const placeTubeAtHole=hole=>{
 
       if(selectedTubeId===null){
-
         setMessage(
           `
-            <strong>
-              尚未選擇 Tube
-            </strong>
-
-            <span>
-              請先從 Tube Rack 選擇離心管。
-            </span>
+            <strong>尚未選擇 Tube</strong>
+            <span>請先從 Tube Rack 選擇離心管。</span>
           `,
           "warning"
         );
@@ -4344,13 +4302,8 @@ const Boss20={
 
         setMessage(
           `
-            <strong>
-              孔位 ${hole} 已被使用
-            </strong>
-
-            <span>
-              請選擇其他空孔位。
-            </span>
+            <strong>孔位 ${hole} 已被使用</strong>
+            <span>請選擇其他空孔位。</span>
           `,
           "warning"
         );
@@ -4367,11 +4320,9 @@ const Boss20={
         selectedTubeId;
 
       selectedTubeId=null;
-
       centrifuge.selectedTubeId=null;
 
       updateAll();
-
       setMessage(
         `
           <strong>
@@ -4788,16 +4739,10 @@ const Boss20={
                       TUBE RACK
                     </span>
 
-                    <strong>
-                      選擇離心管
-                    </strong>
-
+                    <strong>選擇離心管</strong>
                   </div>
 
-                  <small>
-                    奇數在左，偶數在右
-                  </small>
-
+                  <small>奇數在左，偶數在右</small>
                 </div>
 
                 <div class="boss20-centrifuge-tube-grid">
@@ -4817,16 +4762,10 @@ const Boss20={
                       24-HOLE ROTOR
                     </span>
 
-                    <strong>
-                      點擊孔位放入 Tube
-                    </strong>
-
+                    <strong>點擊孔位放入 Tube</strong>
                   </div>
 
-                  <small>
-                    再次點擊已使用孔位可取出
-                  </small>
-
+                  <small>再次點擊已使用孔位可取出</small>
                 </div>
 
                 <div class="boss20-rotor-shell">
@@ -4837,13 +4776,8 @@ const Boss20={
                       CENTRIFUGE
                     </span>
 
-                    <strong>
-                      24
-                    </strong>
-
-                    <small>
-                      HOLES
-                    </small>
+                    <strong>24</strong>
+                    <small>HOLES</small>
 
                   </div>
 
@@ -4852,34 +4786,23 @@ const Boss20={
                   </div>
 
                 </div>
-
               </section>
-
             </div>
 
 
             <section class="boss20-centrifuge-controls">
-
               <div class="boss20-section-heading">
-
                 <div>
-
                   <span class="kicker">
                     MACHINE SETTINGS
                   </span>
 
-                  <strong>
-                    設定離心參數
-                  </strong>
+                  <strong>設定離心參數</strong>
 
                 </div>
 
-                <small>
-                  請依照上方指定條件設定
-                </small>
-
+                <small>請依照上方指定條件設定</small>
               </div>
-
 
               <div class="boss20-setting-grid">
 
@@ -4930,18 +4853,11 @@ const Boss20={
                       placeholder="輸入時間"
                     >
 
-                    <span>
-                      min
-                    </span>
-
+                    <span>min</span>
                   </div>
-
                 </label>
-
               </div>
-
             </section>
-
 
             <div
               id="boss20CentrifugeMessage"
@@ -4961,9 +4877,7 @@ const Boss20={
               >
                 關閉上蓋並開始離心
               </button>
-
             </div>
-
           </div>
         `
       );
@@ -4975,11 +4889,9 @@ const Boss20={
 
     updateAll();
 
-
     /**********************************************************************
      * 選擇 Tube
      **********************************************************************/
-
     ctx.stage
       .querySelectorAll(
         "[data-boss20-centrifuge-tube]"
@@ -5196,13 +5108,8 @@ const Boss20={
 
           setMessage(
             `
-              <strong>
-                請輸入離心時間
-              </strong>
-
-              <span>
-                必須先設定離心時間。
-              </span>
+              <strong>請輸入離心時間</strong>
+              <span>必須先設定離心時間。</span>
             `,
             "warning"
           );
@@ -5219,9 +5126,7 @@ const Boss20={
           validateBalance();
 
         if(balanceErrors.length>0){
-
           centrifuge.passed=false;
-
           this.failMission(
             ctx,
             [
@@ -5255,7 +5160,7 @@ const Boss20={
           return;
         }
 
-
+        
         /******************************************************************
          * RPM 錯誤
          ******************************************************************/
@@ -5369,9 +5274,7 @@ const Boss20={
 
         setMessage(
           `
-            <strong>
-              離心機運轉中
-            </strong>
+            <strong>離心機運轉中</strong>
 
             <span>
               ${centrifuge.rpm} RPM，
@@ -5399,9 +5302,7 @@ const Boss20={
 
             setMessage(
               `
-                <strong>
-                  離心完成
-                </strong>
+                <strong>離心完成</strong>
 
                 <span>
                   所有離心管已正確配平，
@@ -5430,12 +5331,9 @@ const Boss20={
    **************************************************************************/
 
   round4(ctx){
-
     const state=
       this.state;
-
     state.currentRound=4;
-
 
     /**********************************************************************
      * Round 3 未完成時，不允許進入標示步驟
@@ -5488,10 +5386,8 @@ const Boss20={
 
     const labeling=
       state.labeling;
-
     const label=
       state.bottle.label;
-
     let locked=false;
 
 
@@ -5511,10 +5407,8 @@ const Boss20={
 
       fbs:
         "10% FBS",
-
       penStrep:
         "1% Pen/Strep",
-
       storage:
         "4°C"
     };
@@ -5571,31 +5465,25 @@ const Boss20={
      **********************************************************************/
 
     const readLabelValues=()=>{
-
       const getValue=id=>{
-
         const input=
           ctx.stage.querySelector(
             id
           );
-
         return input
           ?input.value.trim()
           :"";
       };
 
       return{
-
         mediumName:
           getValue(
             "#boss20LabelMediumName"
           ),
-
         totalVolume:
           getValue(
             "#boss20LabelTotalVolume"
           ),
-
         fbs:
           getValue(
             "#boss20LabelFbs"
@@ -5610,12 +5498,10 @@ const Boss20={
           getValue(
             "#boss20LabelDate"
           ),
-
         operatorInitials:
           getValue(
             "#boss20LabelInitials"
           ),
-
         storage:
           getValue(
             "#boss20LabelStorage"
@@ -5629,10 +5515,8 @@ const Boss20={
      **********************************************************************/
 
     const saveLabelValues=()=>{
-
       const values=
         readLabelValues();
-
       Object.assign(
         label,
         values
@@ -5819,38 +5703,16 @@ const Boss20={
                   LABEL REQUIREMENTS
                 </span>
 
-                <strong>
-                  Complete DMEM Bottle
-                </strong>
+                <strong>Complete DMEM Bottle</strong>
 
                 <ul>
-                  <li>
-                    培養基名稱
-                  </li>
-
-                  <li>
-                    總體積
-                  </li>
-
-                  <li>
-                    FBS 濃度
-                  </li>
-
-                  <li>
-                    Pen/Strep 濃度
-                  </li>
-
-                  <li>
-                    製備日期
-                  </li>
-
-                  <li>
-                    操作者縮寫
-                  </li>
-
-                  <li>
-                    保存條件
-                  </li>
+                  <li>培養基名稱</li>
+                  <li>總體積</li>
+                  <li>FBS 濃度</li>
+                  <li>Pen/Strep 濃度</li>
+                  <li>製備日期</li>
+                  <li>操作者縮寫</li>
+                  <li>保存條件</li>
                 </ul>
 
               </div>
@@ -5861,9 +5723,7 @@ const Boss20={
                   IMPORTANT
                 </span>
 
-                <strong>
-                  標籤錯誤將造成樣本辨識風險
-                </strong>
+                <strong>標籤錯誤將造成樣本辨識風險</strong>
 
                 <p>
                   確認標籤後若有任何資料錯誤，
@@ -5887,18 +5747,13 @@ const Boss20={
                       LABEL INFORMATION
                     </span>
 
-                    <strong>
-                      輸入標籤內容
-                    </strong>
+                    <strong>輸入標籤內容</strong>
 
                   </div>
 
-                  <small>
-                    所有欄位皆為必填
-                  </small>
+                  <small>所有欄位皆為必填</small>
 
                 </div>
-
 
                 <div class="boss20-label-form">
 
@@ -6014,12 +5869,9 @@ const Boss20={
 
                   </label>
 
-
                   <label class="boss20-label-field">
 
-                    <span>
-                      Storage
-                    </span>
+                    <span>Storage</span>
 
                     <input
                       type="text"
@@ -6048,15 +5900,11 @@ const Boss20={
                       LIVE PREVIEW
                     </span>
 
-                    <strong>
-                      Bottle Label Preview
-                    </strong>
+                    <strong>Bottle Label Preview</strong>
 
                   </div>
 
-                  <small>
-                    輸入時即時更新
-                  </small>
+                  <small>輸入時即時更新</small>
 
                 </div>
 
@@ -6101,7 +5949,6 @@ const Boss20={
      **********************************************************************/
 
     updatePreview();
-
 
     /**********************************************************************
      * 所有輸入欄位即時更新
@@ -6504,9 +6351,7 @@ const Boss20={
 
         setMessage(
           `
-            <strong>
-              Complete DMEM 標籤完成
-            </strong>
+            <strong>Complete DMEM 標籤完成</strong>
 
             <span>
               ${this.escapeHtml(label.mediumName)} ／
@@ -6541,7 +6386,6 @@ const Boss20={
     );
   },
   
-
 
   /**************************************************************************
    * ROUND 5
@@ -7103,10 +6947,7 @@ const Boss20={
                   QUALITY CONTROL
                 </span>
 
-                <strong>
-                  Select all correct observations
-                </strong>
-
+                <strong>Select all correct observations</strong>
                 <span>
                   選錯項目或遺漏必要項目，
                   將判定 Final Inspection 失敗。
@@ -7127,15 +6968,10 @@ const Boss20={
                     BATCH RECORD
                   </span>
 
-                  <strong>
-                    Complete DMEM 製備紀錄
-                  </strong>
+                  <strong>Complete DMEM 製備紀錄</strong>
 
                 </div>
-
-                <small>
-                  Boss Level 20
-                </small>
+                <small>Boss Level 20</small>
 
               </div>
 
@@ -7143,53 +6979,34 @@ const Boss20={
               <div class="boss20-batch-summary-grid">
 
                 <div>
-
-                  <small>
-                    Final volume
-                  </small>
-
+                  <small>Final volume</small>
                   <strong>
                     ${this.displayNumber(
                       state.totalVolume
                     )} mL
                   </strong>
-
                 </div>
 
                 <div>
-
-                  <small>
-                    DMEM
-                  </small>
-
+                  <small>DMEM</small>
                   <strong>
                     ${this.displayNumber(
                       state.formula?.DMEM
                     )} mL
                   </strong>
-
                 </div>
 
                 <div>
-
-                  <small>
-                    FBS
-                  </small>
-
+                  <small>FBS</small>
                   <strong>
                     ${this.displayNumber(
                       state.formula?.FBS
                     )} mL
                   </strong>
-
                 </div>
 
                 <div>
-
-                  <small>
-                    Pen/Strep
-                  </small>
-
+                  <small>Pen/Strep</small>
                   <strong>
                     ${this.displayNumber(
                       state.formula?.[
@@ -7197,143 +7014,91 @@ const Boss20={
                       ]
                     )} mL
                   </strong>
-
                 </div>
 
                 <div>
-
-                  <small>
-                    Tubes
-                  </small>
-
+                  <small>Tubes</small>
                   <strong>
                     ${tubes.length}
                   </strong>
-
                 </div>
 
                 <div>
-
-                  <small>
-                    Aliquoted
-                  </small>
-
+                  <small>Aliquoted</small>
                   <strong>
                     ${this.displayNumber(
                       transferredTotal
                     )} mL
                   </strong>
-
                 </div>
 
                 <div>
-
-                  <small>
-                    Centrifuged
-                  </small>
-
+                  <small>Centrifuged</small>
                   <strong>
                     ${processedTubeCount}
                     /
                     ${tubes.length}
                   </strong>
-
                 </div>
 
                 <div>
-
-                  <small>
-                    Storage
-                  </small>
-
+                  <small>Storage</small>
                   <strong>
                     ${this.escapeHtml(
                       label.storage||
                       "—"
                     )}
                   </strong>
-
                 </div>
 
               </div>
-
             </section>
 
 
             <div class="boss20-final-review-layout">
-
               <section class="boss20-final-label-panel">
-
                 <div class="boss20-section-heading">
-
                   <div>
-
                     <span class="kicker">
                       FINAL LABEL
                     </span>
-
-                    <strong>
-                      Complete DMEM Label
-                    </strong>
-
+                    <strong>Complete DMEM Label</strong>
                   </div>
-
-                  <small>
-                    Round 4 result
-                  </small>
-
+                  <small>Round 4 result</small>
                 </div>
 
 
                 <div class="boss20-final-bottle">
-
                   ${this.bottleHtml({
                     currentVolume:0,
                     showLabel:true,
                     label
                   })}
-
                 </div>
 
-
                 <div class="boss20-final-label-record">
-
                   <div>
-
-                    <small>
-                      Medium
-                    </small>
-
+                    <small>Medium</small>
                     <strong>
                       ${this.escapeHtml(
                         label.mediumName||
                         "—"
                       )}
                     </strong>
-
                   </div>
 
                   <div>
-
-                    <small>
-                      Volume
-                    </small>
-
+                    <small>Volume</small>
                     <strong>
                       ${this.escapeHtml(
                         label.totalVolume||
                         "—"
                       )}
                     </strong>
-
                   </div>
 
                   <div>
-
-                    <small>
-                      Supplements
-                    </small>
-
+                    <small>Supplements</small>
                     <strong>
                       ${this.escapeHtml(
                         label.fbs||
@@ -7345,73 +7110,48 @@ const Boss20={
                         "—"
                       )}
                     </strong>
-
                   </div>
 
                   <div>
-
-                    <small>
-                      Preparation date
-                    </small>
-
+                    <small>Preparation date</small>
                     <strong>
                       ${this.escapeHtml(
                         label.preparationDate||
                         "—"
                       )}
                     </strong>
-
                   </div>
 
                   <div>
-
-                    <small>
-                      Operator
-                    </small>
-
+                    <small>Operator</small>
                     <strong>
                       ${this.escapeHtml(
                         label.operatorInitials||
                         "—"
                       )}
                     </strong>
-
                   </div>
 
                   <div>
-
-                    <small>
-                      Storage
-                    </small>
-
+                    <small>Storage</small>
                     <strong>
                       ${this.escapeHtml(
                         label.storage||
                         "—"
                       )}
                     </strong>
-
                   </div>
 
                 </div>
-
               </section>
 
-
               <section class="boss20-final-tube-panel">
-
                 <div class="boss20-section-heading">
-
                   <div>
-
                     <span class="kicker">
                       TUBE RECORD
                     </span>
-
-                    <strong>
-                      Aliquot Inspection
-                    </strong>
-
+                    <strong>Aliquot Inspection</strong>
                   </div>
 
                   <small>
@@ -7425,38 +7165,23 @@ const Boss20={
                 </div>
 
               </section>
-
             </div>
 
-
             <section class="boss20-inspection-checklist">
-
               <div class="boss20-section-heading">
-
                 <div>
-
                   <span class="kicker">
                     FINAL CHECKLIST
                   </span>
-
-                  <strong>
-                    選擇所有正確敘述
-                  </strong>
-
+                  <strong>選擇所有正確敘述</strong>
                 </div>
-
-                <small>
-                  部分項目為錯誤敘述
-                </small>
-
+                <small>部分項目為錯誤敘述</small>
               </div>
 
               <div class="boss20-inspection-item-grid">
                 ${checklistHtml}
               </div>
-
             </section>
-
 
             <div
               id="boss20InspectionMessage"
@@ -7467,7 +7192,6 @@ const Boss20={
               再選擇所有正確敘述。
             </div>
 
-
             <div class="controls">
 
               <button
@@ -7477,9 +7201,7 @@ const Boss20={
               >
                 完成 Final Inspection
               </button>
-
             </div>
-
           </div>
         `
       );
@@ -7491,7 +7213,6 @@ const Boss20={
 
     updateAll();
 
-
     /**********************************************************************
      * Inspection 項目點擊
      **********************************************************************/
@@ -7502,7 +7223,6 @@ const Boss20={
       )
       .forEach(
         button=>{
-
           button.addEventListener(
             "click",
             ()=>{
@@ -7905,10 +7625,7 @@ const Boss20={
 
         setMessage(
           `
-            <strong>
-              Final Inspection Passed
-            </strong>
-
+            <strong>Final Inspection Passed</strong>
             <span>
               Complete DMEM 配製、分裝、離心、標籤與保存條件均已確認。
               本批次品質檢查完成。
