@@ -5071,13 +5071,8 @@ const Boss20={
 
           setMessage(
             `
-              <strong>
-                請輸入 RPM
-              </strong>
-
-              <span>
-                必須先設定離心轉速。
-              </span>
+              <strong>請輸入 RPM</strong>
+              <span>必須先設定離心轉速。</span>
             `,
             "warning"
           );
@@ -5252,7 +5247,6 @@ const Boss20={
           );
 
         if(rotor){
-
           rotor.classList.add(
             "spinning"
           );
@@ -5274,7 +5268,6 @@ const Boss20={
           ()=>{
 
             if(rotor){
-
               rotor.classList.remove(
                 "spinning"
               );
@@ -5680,17 +5673,13 @@ const Boss20={
 
         `
           <div class="boss20-round boss20-round4">
-
             <section class="boss20-label-summary">
-
               <div class="boss20-label-requirement">
-
                 <span class="kicker">
                   LABEL REQUIREMENTS
                 </span>
 
                 <strong>Complete DMEM Bottle</strong>
-
                 <ul>
                   <li>培養基名稱</li>
                   <li>總體積</li>
@@ -5720,15 +5709,11 @@ const Boss20={
 
             </section>
 
-
             <div class="boss20-label-layout">
 
               <section class="boss20-label-form-panel">
-
                 <div class="boss20-section-heading">
-
                   <div>
-
                     <span class="kicker">
                       LABEL INFORMATION
                     </span>
@@ -5738,17 +5723,12 @@ const Boss20={
                   </div>
 
                   <small>所有欄位皆為必填</small>
-
                 </div>
 
                 <div class="boss20-label-form">
-
                   <label class="boss20-label-field">
 
-                    <span>
-                      Medium name
-                    </span>
-
+                    <span>Medium name</span>
                     <input
                       type="text"
                       id="boss20LabelMediumName"
@@ -5761,13 +5741,8 @@ const Boss20={
 
                   </label>
 
-
                   <label class="boss20-label-field">
-
-                    <span>
-                      Total volume
-                    </span>
-
+                    <span>Total volume</span>
                     <input
                       type="text"
                       id="boss20LabelTotalVolume"
@@ -5780,13 +5755,8 @@ const Boss20={
 
                   </label>
 
-
                   <label class="boss20-label-field">
-
-                    <span>
-                      FBS
-                    </span>
-
+                    <span>FBS</span>
                     <input
                       type="text"
                       id="boss20LabelFbs"
@@ -5799,13 +5769,8 @@ const Boss20={
 
                   </label>
 
-
                   <label class="boss20-label-field">
-
-                    <span>
-                      Pen/Strep
-                    </span>
-
+                    <span>Pen/Strep</span>
                     <input
                       type="text"
                       id="boss20LabelPenStrep"
@@ -5815,16 +5780,10 @@ const Boss20={
                       placeholder="例如：1% Pen/Strep"
                       autocomplete="off"
                     >
-
                   </label>
 
-
                   <label class="boss20-label-field">
-
-                    <span>
-                      Preparation date
-                    </span>
-
+                    <span>Preparation date</span>
                     <input
                       type="date"
                       id="boss20LabelDate"
@@ -5835,13 +5794,8 @@ const Boss20={
 
                   </label>
 
-
                   <label class="boss20-label-field">
-
-                    <span>
-                      Operator initials
-                    </span>
-
+                    <span>Operator initials</span>
                     <input
                       type="text"
                       id="boss20LabelInitials"
@@ -5854,11 +5808,8 @@ const Boss20={
                     >
 
                   </label>
-
                   <label class="boss20-label-field">
-
                     <span>Storage</span>
-
                     <input
                       type="text"
                       id="boss20LabelStorage"
@@ -5868,18 +5819,14 @@ const Boss20={
                       placeholder="例如：4°C"
                       autocomplete="off"
                     >
-
                   </label>
 
                 </div>
 
               </section>
 
-
               <section class="boss20-label-preview-panel">
-
                 <div class="boss20-section-heading">
-
                   <div>
 
                     <span class="kicker">
@@ -5887,11 +5834,9 @@ const Boss20={
                     </span>
 
                     <strong>Bottle Label Preview</strong>
-
                   </div>
 
                   <small>輸入時即時更新</small>
-
                 </div>
 
                 <div
@@ -5911,7 +5856,6 @@ const Boss20={
             >
               請依照本次 Complete DMEM 配方填寫完整標籤。
             </div>
-
 
             <div class="controls">
 
@@ -5946,7 +5890,6 @@ const Boss20={
       )
       .forEach(
         input=>{
-
           input.addEventListener(
             "input",
             ()=>{
@@ -6049,7 +5992,6 @@ const Boss20={
         );
 
         if(!mediumNameValid){
-
           errors.push(
             `培養基名稱應為「${correctLabel.mediumName}」。`
           );
@@ -6155,7 +6097,6 @@ const Boss20={
         );
 
         if(!penStrepValid){
-
           errors.push(
             "Pen/Strep 濃度應標示為 1% Pen/Strep。"
           );
@@ -6180,7 +6121,6 @@ const Boss20={
         );
 
         if(!preparationDateValid){
-
           errors.push(
             "必須填寫有效的製備日期。"
           );
@@ -6580,7 +6520,6 @@ const Boss20={
         )
       );
 
-
     /**********************************************************************
      * 取得已離心 Tube 數量
      *
@@ -6644,7 +6583,6 @@ const Boss20={
         );
 
       if(progressText){
-
         progressText.textContent=
           `${selectedCorrectCount} / ${requiredItemIds.length}`;
       }
@@ -6655,7 +6593,6 @@ const Boss20={
         );
 
       if(progressBar){
-
         progressBar.style.width=
           `${
             requiredItemIds.length===0
