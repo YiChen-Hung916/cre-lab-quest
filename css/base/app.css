@@ -1184,16 +1184,30 @@ linear-gradient(#f1d9d9,#dfbbbb);filter:blur(10px) brightness(.95);transform:sca
    Round 2：Tube 排列
 --------------------------------------------------------- */
 
-.boss20-transfer-tube-grid,
-.boss20-tube-grid,
-.boss20-transfer-tubes{
+/* ---------------------------------------------------------
+   Round 2：Tube Rack 排列
+--------------------------------------------------------- */
+
+.boss20-tube-rack-grid{
   display:grid;
-  grid-template-columns:
-    repeat(2,minmax(0,1fr));
-  grid-auto-flow:row;
-  gap:10px;
+  grid-template-columns:repeat(5,76px);
+  justify-content:center;
+  align-items:end;
+  gap:14px 12px;
   width:100%;
   direction:ltr;
+}
+
+.boss20-transfer-tube{
+  width:76px;
+  min-width:76px;
+  max-width:76px;
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
 }
 
 .boss20-transfer-tube{
@@ -1423,9 +1437,7 @@ linear-gradient(#f1d9d9,#dfbbbb);filter:blur(10px) brightness(.95);transform:sca
   background:#f6fafb;
 }
 
-.boss20-round2 .boss20-transfer-tube-grid,
-.boss20-round2 .boss20-tube-grid,
-.boss20-round2 .boss20-transfer-tubes{
+.boss20-round2 .boss20-tube-rack-grid{
   display:grid;
   grid-template-columns:repeat(5,76px);
   justify-content:center;
@@ -1458,64 +1470,49 @@ linear-gradient(#f1d9d9,#dfbbbb);filter:blur(10px) brightness(.95);transform:sca
     0 7px 8px rgba(27,60,77,.18)
   );
 }
-
 .boss20-round2 .boss20-transfer-tube:disabled{
   opacity:1;
   cursor:default;
 }
-
 .boss20-round2 .boss20-transfer-tube .boss20-tube-cap{
   width:60px;
   height:24px;
 }
-
 .boss20-round2 .boss20-transfer-tube .boss20-tube-body{
   width:76px;
   height:175px;
 }
 
 @media(max-width:900px){
-
   .boss20-round2 .boss20-transfer-layout{
     grid-template-columns:1fr;
   }
-
-  .boss20-round2 .boss20-transfer-tube-grid,
-  .boss20-round2 .boss20-tube-grid,
-  .boss20-round2 .boss20-transfer-tubes{
-    grid-template-columns:repeat(5,70px);
+  .boss20-round2 .boss20-tube-rack-grid{
+  grid-template-columns:repeat(5,70px);
   }
-
   .boss20-round2 .boss20-transfer-tube{
     width:70px;
     min-width:70px;
     max-width:70px;
   }
-
   .boss20-round2 .boss20-transfer-tube .boss20-tube-body{
     width:70px;
   }
 }
 
 @media(max-width:560px){
-
-  .boss20-round2 .boss20-transfer-tube-grid,
-  .boss20-round2 .boss20-tube-grid,
-  .boss20-round2 .boss20-transfer-tubes{
-    grid-template-columns:repeat(2,65px);
-    gap:12px 18px;
+  .boss20-round2 .boss20-tube-rack-grid{
+  grid-template-columns:repeat(2,65px);
+  gap:12px 18px;
   }
-
   .boss20-round2 .boss20-transfer-tube{
     width:65px;
     min-width:65px;
     max-width:65px;
   }
-
   .boss20-round2 .boss20-transfer-tube .boss20-tube-cap{
     width:51px;
   }
-
   .boss20-round2 .boss20-transfer-tube .boss20-tube-body{
     width:65px;
     height:150px;
