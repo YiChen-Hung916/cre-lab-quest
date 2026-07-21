@@ -1518,3 +1518,411 @@ linear-gradient(#f1d9d9,#dfbbbb);filter:blur(10px) brightness(.95);transform:sca
     height:150px;
   }
 }
+
+
+/* =========================================================
+   BOSS20 ROUND 3 — 16-HOLE CENTRIFUGE FINAL FIX
+========================================================= */
+
+/* Round 3 左右布局 */
+.boss20-round3 .boss20-centrifuge-layout{
+  display:grid;
+  grid-template-columns:
+    minmax(230px,.7fr)
+    minmax(360px,1.3fr);
+  gap:22px;
+  align-items:start;
+  width:100%;
+}
+
+/* Summary */
+.boss20-round3 .boss20-centrifuge-summary{
+  display:grid;
+  grid-template-columns:
+    minmax(150px,.7fr)
+    minmax(220px,1fr)
+    minmax(150px,.7fr);
+  gap:12px;
+  align-items:stretch;
+  margin-bottom:18px;
+}
+
+.boss20-round3 .boss20-centrifuge-progress-card,
+.boss20-round3 .boss20-centrifuge-selection,
+.boss20-round3 .boss20-centrifuge-target{
+  min-width:0;
+  padding:13px;
+  border:1px solid var(--line);
+  border-radius:15px;
+  background:#f5fafb;
+}
+
+.boss20-round3 .boss20-centrifuge-selection,
+.boss20-round3 .boss20-centrifuge-target{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:4px;
+}
+
+/* Tube Rack */
+.boss20-round3 .boss20-centrifuge-rack-panel,
+.boss20-round3 .boss20-rotor-panel,
+.boss20-round3 .boss20-centrifuge-controls{
+  min-width:0;
+  padding:17px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:#f6fafb;
+}
+
+.boss20-round3 .boss20-centrifuge-tube-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+
+/* 不再讓 Tube 變成大型橫向水槽 */
+.boss20-round3 .boss20-centrifuge-tube{
+  display:grid;
+  grid-template-columns:46px minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+
+  width:100%;
+  min-width:0;
+  min-height:96px;
+  margin:0;
+  padding:9px;
+
+  border:1px solid #cbdbe2;
+  border-radius:14px;
+  background:#fff;
+  color:var(--ink);
+  cursor:pointer;
+  text-align:left;
+}
+
+.boss20-round3 .boss20-centrifuge-tube:hover:not(:disabled){
+  border-color:#73aab3;
+  transform:translateY(-2px);
+}
+
+.boss20-round3 .boss20-centrifuge-tube.selected{
+  border-color:var(--blue);
+  box-shadow:
+    0 0 0 3px rgba(74,137,184,.16);
+}
+
+.boss20-round3 .boss20-centrifuge-tube.placed{
+  opacity:.4;
+}
+
+/* 小型 Tube 外觀 */
+.boss20-round3 .boss20-centrifuge-tube-visual{
+  display:block;
+  width:42px;
+  margin:auto;
+}
+
+.boss20-round3
+.boss20-centrifuge-tube-visual
+.boss20-tube-cap{
+  display:block;
+  width:32px;
+  height:11px;
+  margin:auto;
+  border-width:1px;
+  border-radius:4px 4px 2px 2px;
+}
+
+.boss20-round3
+.boss20-centrifuge-tube-visual
+.boss20-tube-body{
+  display:block;
+  position:relative;
+  overflow:hidden;
+
+  width:42px;
+  height:68px;
+
+  border:2px solid #9db3bd;
+  border-radius:5px 5px 13px 13px;
+}
+
+.boss20-round3 .boss20-centrifuge-tube-info{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+
+.boss20-round3 .boss20-centrifuge-tube-info strong{
+  font-size:.8rem;
+}
+
+.boss20-round3 .boss20-centrifuge-tube-info small{
+  font-size:.68rem;
+  color:var(--muted);
+}
+
+/* =========================================================
+   16 孔圓形 Rotor
+========================================================= */
+
+.boss20-round3 .boss20-rotor-shell{
+  position:relative;
+  width:min(390px,100%);
+  aspect-ratio:1;
+  margin:10px auto;
+}
+
+.boss20-round3 .boss20-rotor-disc{
+  position:absolute;
+  inset:0;
+
+  border-radius:50%;
+
+  background:
+    radial-gradient(
+      circle,
+      #b9c9d0 0 15%,
+      #71858f 16% 32%,
+      #425965 33% 72%,
+      #263d49 73% 100%
+    );
+
+  box-shadow:
+    inset 0 0 0 11px #d6e1e6,
+    inset 0 0 0 17px #6f838d,
+    0 16px 28px rgba(20,48,65,.2);
+}
+
+.boss20-round3 .boss20-rotor-center{
+  position:absolute;
+  z-index:5;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+
+  width:112px;
+  height:112px;
+
+  border:7px solid #d9e4e8;
+  border-radius:50%;
+
+  background:
+    radial-gradient(
+      circle,
+      #f5fafb,
+      #aabdc5
+    );
+
+  color:#213d4c;
+  text-align:center;
+  pointer-events:none;
+}
+
+.boss20-round3 .boss20-rotor-center span,
+.boss20-round3 .boss20-rotor-center small{
+  font-size:.58rem;
+}
+
+.boss20-round3 .boss20-rotor-center strong{
+  font-size:1.4rem;
+}
+
+/* 16 個孔沿圓周排列 */
+.boss20-round3 .boss20-rotor-hole{
+  --rotor-radius:150px;
+
+  position:absolute;
+  z-index:4;
+  top:50%;
+  left:50%;
+
+  width:38px;
+  height:53px;
+  padding:0;
+
+  border:3px solid #cbd8de;
+  border-radius:12px;
+
+  background:#142f3e;
+  color:#fff;
+  cursor:pointer;
+
+  transform:
+    translate(-50%,-50%)
+    rotate(var(--rotor-angle))
+    translateY(calc(var(--rotor-radius) * -1))
+    rotate(calc(var(--rotor-angle) * -1));
+
+  box-shadow:
+    inset 0 -4px 0 rgba(0,0,0,.2);
+
+  transition:
+    background .18s,
+    filter .18s;
+}
+
+.boss20-round3 .boss20-rotor-hole:hover{
+  background:#1e4b60;
+  filter:brightness(1.1);
+}
+
+.boss20-round3 .boss20-rotor-hole.occupied{
+  background:#d47782;
+  border-color:#f2b0b6;
+}
+
+.boss20-round3 .boss20-hole-number{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+
+  font-size:.68rem;
+  font-weight:900;
+}
+
+.boss20-round3
+.boss20-rotor-hole.occupied
+.boss20-hole-number{
+  display:none;
+}
+
+.boss20-round3 .boss20-rotor-tube{
+  display:none;
+  position:absolute;
+  inset:2px;
+
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+
+  line-height:1.05;
+  text-align:center;
+}
+
+.boss20-round3
+.boss20-rotor-hole.occupied
+.boss20-rotor-tube{
+  display:flex;
+}
+
+.boss20-round3 .boss20-rotor-tube-label{
+  font-size:.58rem;
+}
+
+.boss20-round3 .boss20-rotor-tube-volume{
+  font-size:.48rem;
+}
+
+/* 離心動畫 */
+@keyframes boss20RotorSpin{
+  from{
+    transform:rotate(0deg);
+  }
+
+  to{
+    transform:rotate(1080deg);
+  }
+}
+
+.boss20-round3 .boss20-rotor-disc.spinning{
+  animation:
+    boss20RotorSpin 1.8s
+    cubic-bezier(.35,.05,.25,1);
+}
+
+/* Machine Settings */
+.boss20-round3 .boss20-centrifuge-controls{
+  margin-top:18px;
+}
+
+.boss20-round3 .boss20-setting-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.boss20-round3 .boss20-setting-field{
+  display:block;
+  min-width:0;
+  padding:13px;
+  border-radius:14px;
+  background:#eef5f7;
+}
+
+.boss20-round3 .boss20-setting-field > span{
+  display:block;
+  margin-bottom:6px;
+  font-size:.75rem;
+  font-weight:800;
+}
+
+.boss20-round3
+.boss20-setting-field
+.boss20-number-input{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:7px;
+  align-items:center;
+}
+
+.boss20-round3
+.boss20-setting-field
+input{
+  width:100%;
+  min-width:0;
+  padding:9px;
+  border:1px solid var(--line);
+  border-radius:10px;
+}
+
+/* 中型畫面 */
+@media(max-width:900px){
+
+  .boss20-round3 .boss20-centrifuge-layout{
+    grid-template-columns:1fr;
+  }
+
+  .boss20-round3 .boss20-centrifuge-summary{
+    grid-template-columns:1fr;
+  }
+}
+
+/* 手機 */
+@media(max-width:560px){
+
+  .boss20-round3 .boss20-centrifuge-tube-grid{
+    grid-template-columns:1fr;
+  }
+
+  .boss20-round3 .boss20-setting-grid{
+    grid-template-columns:1fr;
+  }
+
+  .boss20-round3 .boss20-rotor-shell{
+    width:min(330px,88vw);
+  }
+
+  .boss20-round3 .boss20-rotor-hole{
+    --rotor-radius:123px;
+
+    width:32px;
+    height:45px;
+    border-width:2px;
+  }
+
+  .boss20-round3 .boss20-rotor-center{
+    width:92px;
+    height:92px;
+  }
+}
+
