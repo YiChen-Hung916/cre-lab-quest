@@ -2257,26 +2257,108 @@ const Boss20={
     }
 
     const transfer=
-      state.transfer;
+  state.transfer;
 
-    /*
-     * 固定按照 Tube 1、Tube 2、Tube 3……
-     * 顯示，不打亂順序。
-     */
-    const tubes=
-      [...transfer.tubes]
-        .sort(
-          (first,second)=>
-            first.id-second.id
-        );
+/*
+ * Round 2 V2
+ *
+ * 只從 Round 1 配好的整瓶 Complete DMEM 中，
+ * 分裝本次實驗需要的一部分。
+ *
+ * 不要求把整瓶培養基全部用完。
+ *
+ * Tube 必須成對，讓 Round 3 可以進行配平。
+ */
+if(
+  transfer.challengeVersion!==2
+){
 
-    const pipetteSizes=[
-      1,
-      5,
-      10,
-      25,
-      50
-    ];
+  const pairedVolumes=[
+    1,
+    5,
+    10,
+    25
+  ];
+
+  transfer.tubes=
+    pairedVolumes
+      .flatMap(
+        (volume,pairIndex)=>[
+          {
+            id:
+              pairIndex*2+1,
+
+            volume:
+              volume,
+
+            transferredVolume:
+              0,
+
+            filled:
+              false
+          },
+          {
+            id:
+              pairIndex*2+2,
+
+            volume:
+              volume,
+
+            transferredVolume:
+              0,
+
+            filled:
+              false
+          }
+        ]
+      );
+
+  transfer.challengeVersion=2;
+  transfer.passed=false;
+  transfer.selectedTubeId=null;
+  transfer.selectedPipette=null;
+  transfer.setVolume=0;
+
+  /*
+   * 切換新版題目時，
+   * 清除舊版 24 孔離心資料。
+   */
+  state.centrifuge=null;
+}
+
+/*
+ * 固定按照 Tube 1、Tube 2、Tube 3……
+ * 顯示，不打亂順序。
+ */
+const tubes=
+  [...transfer.tubes]
+    .sort(
+      (first,second)=>
+        first.id-second.id
+    );
+
+const pipetteSizes=[
+  1,
+  5,
+  10,
+  25,
+  50
+];
+
+/*
+ * 本次指定要分裝的總量。
+ *
+ * 只用來檢查這 8 支 Tube，
+ * 不代表整瓶 Complete DMEM 的總量。
+ */
+const requiredTransferTotal=
+  this.roundOneDecimal(
+    tubes.reduce(
+      (sum,tube)=>
+        sum+Number(tube.volume||0),
+      0
+    )
+  );
 
     let selectedTubeId=
       transfer.selectedTubeId;
@@ -2403,28 +2485,22 @@ const Boss20={
         return;
       }
 
-      const correctPipette=
-        getCorrectPipette(
-          tube.volume
-        );
-
       status.innerHTML=`
-        <strong>
-          Tube ${tube.id}
-        </strong>
+  <strong>
+    Tube ${tube.id}
+  </strong>
 
-        <span>
-          目標體積：
-          ${this.displayNumber(
-            tube.volume
-          )} mL
-        </span>
+  <span>
+    目標體積：
+    ${this.displayNumber(
+      tube.volume
+    )} mL
+  </span>
 
-        <span>
-          建議選擇：
-          ${correctPipette} mL pipette
-        </span>
-      `;
+  <span>
+    請選擇能容納此體積的最小規格 Pipette。
+  </span>
+`;
     };
 
 
@@ -3673,80 +3749,87 @@ const Boss20={
                   );
 
                 /*
-                 * 檢查所有分裝體積總和。
-                 */
-                if(
-                  !this.approximatelyEqual(
-                    transferredTotal,
-                    state.totalVolume,
-                    .1
-                  )||
-                  !this.approximatelyEqual(
-                    state.bottleRemaining,
-                    0,
-                    .1
-                  )
-                ){
+ * 檢查本次指定的 Tube 是否全部正確完成。
+ *
+ * 注意：
+ * 不要求整瓶 Complete DMEM 用完。
+ */
+if(
+  !this.approximatelyEqual(
+    transferredTotal,
+    requiredTransferTotal,
+    .1
+  )
+){
 
-                  transfer.passed=false;
+  transfer.passed=false;
 
-                  this.failMission(
-                    ctx,
-                    [
-                      `分裝總量為 ${this.displayNumber(
-                        transferredTotal
-                      )} mL。`,
-                      `培養基瓶剩餘 ${this.displayNumber(
-                        state.bottleRemaining
-                      )} mL。`,
-                      `正確總量應為 ${this.displayNumber(
-                        state.totalVolume
-                      )} mL。`
-                    ],
-                    {
-                      penalties:[
-                        {
-                          metric:"accuracy",
-                          amount:100,
-                          message:
-                            "Complete DMEM 分裝總量不一致。"
-                        },
-                        {
-                          metric:"sampleQuality",
-                          amount:100,
-                          message:
-                            "離心管內培養基容量不正確。"
-                        }
-                      ]
-                    }
-                  );
+  this.failMission(
+    ctx,
+    [
+      `本次分裝總量為 ${this.displayNumber(
+        transferredTotal
+      )} mL。`,
 
-                  return;
-                }
+      `指定分裝總量應為 ${this.displayNumber(
+        requiredTransferTotal
+      )} mL。`
+    ],
+    {
+      penalties:[
+        {
+          metric:"accuracy",
+          amount:100,
+          message:
+            "Complete DMEM 分裝總量不正確。"
+        },
+        {
+          metric:"sampleQuality",
+          amount:100,
+          message:
+            "離心管內培養基容量不正確。"
+        }
+      ]
+    }
+  );
 
-                transfer.passed=true;
+  return;
+}
 
-                state.bottleRemaining=0;
+transfer.passed=true;
 
-                state.bottle.currentVolume=0;
+/*
+ * 不再把母瓶剩餘量歸零。
+ * 保留 Round 1 配製後尚未使用的 Complete DMEM。
+ */
+state.bottle.currentVolume=
+  state.bottleRemaining;
 
-                updateBottle();
+updateBottle();
 
                 setMessage(
-                  `
-                    <strong>
-                      Complete DMEM 分裝完成
-                    </strong>
+  `
+    <strong>
+      本次 Complete DMEM 分裝完成
+    </strong>
 
-                    <span>
-                      已完成 ${tubes.length} 支離心管，
-                      共 ${this.displayNumber(
-                        transferredTotal
-                      )} mL。
-                    </span>
-                  `,
-                  "success"
-                );
+    <span>
+      已完成 ${tubes.length} 支離心管，
+      共分裝 ${this.displayNumber(
+        transferredTotal
+      )} mL。
+    </span>
+
+    <span>
+      母瓶剩餘
+      ${this.displayNumber(
+        state.bottleRemaining
+      )} mL，
+      不需要將整瓶培養基用完。
+    </span>
+  `,
+  "success"
+);
 
                 this.completeRound(
                   ctx,
@@ -3827,52 +3910,100 @@ const Boss20={
      * 建立／延續離心狀態
      **********************************************************************/
 
-    if(!state.centrifuge){
+    /*
+ * 使用數個合理的題目組合，
+ * 避免產生非整百 RPM。
+ */
+const centrifugePrograms=[
+  {
+    rpm:1000,
+    time:3
+  },
+  {
+    rpm:1200,
+    time:5
+  },
+  {
+    rpm:1500,
+    time:5
+  },
+  {
+    rpm:1800,
+    time:8
+  }
+];
 
-      state.centrifuge={
-        passed:false,
+if(
+  !state.centrifuge||
+  state.centrifuge.challengeVersion!==2
+){
 
-        rpm:
-          this.randomInt(
-            1000,
-            1800
-          ),
+  const program=
+    centrifugePrograms[
+      this.randomInt(
+        0,
+        centrifugePrograms.length-1
+      )
+    ];
 
-        time:
-          this.randomInt(
-            3,
-            8
-          ),
+  state.centrifuge={
+    challengeVersion:2,
+    passed:false,
+    rpm:program.rpm,
+    time:program.time,
+    selectedTubeId:null,
+    placements:{},
+    started:false
+  };
+}
 
-        selectedTubeId:null,
-        placements:{},
-        started:false
-      };
-    }
+const centrifuge=
+  state.centrifuge;
 
-    const centrifuge=
-      state.centrifuge;
+/*
+ * 防止舊存檔或不完整資料顯示 undefined。
+ */
+if(
+  !Number.isFinite(
+    Number(centrifuge.rpm)
+  )
+){
+
+  centrifuge.rpm=1200;
+}
+
+if(
+  !Number.isFinite(
+    Number(centrifuge.time)
+  )
+){
+
+  centrifuge.time=5;
+}
 
     const tubes=
-      [...state.transfer.tubes]
-        .sort(
-          (first,second)=>
-            first.id-second.id
-        );
+  [...state.transfer.tubes]
+    .filter(
+      tube=>tube.filled
+    )
+    .sort(
+      (first,second)=>
+        first.id-second.id
+    );
 
     /*
-     * 離心機共有 24 個孔位。
+     * 離心機共有 16 個孔位。
      *
      * 孔位編號：
-     * 1～24
+     * 1～16
      *
      * 對向孔位：
-     * 1 ↔ 13
-     * 2 ↔ 14
+     * 1 ↔ 9
+     * 2 ↔ 10
      * ...
-     * 12 ↔ 24
+     * 12 ↔ 16
      */
-    const holeCount=24;
+    const holeCount=16;
 
     let selectedTubeId=
       centrifuge.selectedTubeId;
@@ -3885,10 +4016,13 @@ const Boss20={
      **********************************************************************/
 
     const oppositeHole=hole=>{
-      return hole<=12
-        ?hole+12
-        :hole-12;
-    };
+  const half=
+    holeCount/2;
+
+  return hole<=half
+    ?hole+half
+    :hole-half;
+};
 
 
     /**********************************************************************
@@ -4290,19 +4424,19 @@ const Boss20={
       centrifuge.selectedTubeId=null;
 
       updateAll();
+      
       setMessage(
-        `
-          <strong>
-            Tube ${placedTubeId} 已放入孔位 ${hole}
-          </strong>
+  `
+    <strong>
+      Tube ${placedTubeId} 已放入孔位 ${hole}
+    </strong>
 
-          <span>
-            對向孔位為
-            ${oppositeHole(hole)}。
-          </span>
-        `,
-        "success"
-      );
+    <span>
+      請繼續完成其餘離心管的配置。
+    </span>
+  `,
+  "success"
+);
     };
 
 
@@ -4628,7 +4762,7 @@ const Boss20={
         "Centrifuge Balance",
 
         `
-          將所有離心管放入 24 孔離心轉子。
+          將 Round 2 的離心管放入 16 孔離心機。
           每一支離心管必須在正對面放置一支相同體積的離心管，
           再設定正確的 RPM 與離心時間。
         `,
@@ -4726,7 +4860,7 @@ const Boss20={
                   <div>
 
                     <span class="kicker">
-                      24-HOLE ROTOR
+                      16-HOLE ROTOR
                     </span>
 
                     <strong>點擊孔位放入 Tube</strong>
@@ -4743,7 +4877,7 @@ const Boss20={
                       CENTRIFUGE
                     </span>
 
-                    <strong>24</strong>
+                    <strong>16</strong>
                     <small>HOLES</small>
 
                   </div>
