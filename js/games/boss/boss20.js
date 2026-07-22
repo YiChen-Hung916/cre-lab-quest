@@ -5780,7 +5780,33 @@ if(
       `
         <div class="boss20-round boss20-round4">
 
-          <section class="boss20-label-summary">
+    <section class="boss20-preparation-record">
+
+        <span class="kicker">
+            PREPARATION RECORD
+        </span>
+
+        <strong>Previous Round Information</strong>
+
+        <div class="boss20-record-grid">
+
+            <div>
+                <small>Medium</small>
+                <strong>Complete DMEM</strong>
+            </div>
+
+            <div>
+                <small>Prepared Volume</small>
+                <strong>
+                    ${this.displayNumber(state.totalVolume)} mL
+                </strong>
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="boss20-label-summary">
 
             <div class="boss20-label-requirement">
 
