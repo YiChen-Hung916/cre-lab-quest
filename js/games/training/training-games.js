@@ -1752,24 +1752,32 @@ const TrainingGames={
       :"g";
 
   const rpmOptions=[
-    1000,
-    1200,
-    1500,
-    1800,
-    2000,
-    2500,
-    3000
-  ];
+500,
+750,
+1000,
+1250,
+1500,
+1750,
+2000,
+2250,
+2500,
+2750,
+3000
+];
 
-  const gOptions=[
-    500,
-    750,
-    1000,
-    1250,
-    1500,
-    2000,
-    2500
-  ];
+const gOptions=[
+500,
+750,
+1000,
+1250,
+1500,
+1750,
+2000,
+2250,
+2500,
+2750,
+3000
+];
 
   const speedOptions=
     targetUnit==="rpm"
@@ -1785,10 +1793,16 @@ const TrainingGames={
     ];
 
   const timeOptions=[
-    3,
-    5,
-    7,
-    10
+    1,
+2,
+3,
+4,
+5,
+6,
+7,
+8,
+9,
+10
   ];
 
   const targetTime=
@@ -2635,7 +2649,11 @@ const TrainingGames={
     ()=>{
 
       speedText.textContent=
-        speedInput.value;
+    `${speedInput.value} ${
+        unitInput.value==="g"
+        ? "×g"
+        : "RPM"
+    }`;
     }
   );
 
