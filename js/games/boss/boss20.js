@@ -203,7 +203,7 @@ const Boss20={
        */
       inspection:{
 
-    found:new Set(),
+    found:[],
 
     mistakes:[],
 
