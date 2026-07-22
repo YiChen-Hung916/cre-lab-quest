@@ -1649,22 +1649,62 @@ const TrainingGames={
   },
 
   centrifuge(ctx){
-  const randomInt=(min,max)=>{
-    return Math.floor(
-      Math.random()*(max-min+1)
+
+  const level=
+    Number(
+      ctx.config.level||8
+    );
+
+  const round=
+    Number(
+      ctx.config.roundIndex||1
+    );
+
+  const randomInt=(min,max)=>
+    Math.floor(
+      Math.random()*
+      (
+        max-min+1
+      )
     )+min;
+
+  const shuffleArray=array=>{
+
+    const copied=[
+      ...array
+    ];
+
+    for(
+      let index=copied.length-1;
+      index>0;
+      index--
+    ){
+
+      const randomIndex=
+        randomInt(
+          0,
+          index
+        );
+
+      [
+        copied[index],
+        copied[randomIndex]
+      ]=[
+        copied[randomIndex],
+        copied[index]
+      ];
+    }
+
+    return copied;
   };
 
-  const level=Number(
-    ctx.config.level||8
-  );
-
-  const round=Number(
-    ctx.config.roundIndex||1
-  );
-
   /*
-   * 不同關卡使用不同 rotor 孔數。
+   * Rotor 孔數：
+   *
+   * Level 8：8 孔
+   * Level 9：12 孔
+   * Level 10：16 孔
+   * Level 11：24 孔
    */
   let holes=8;
 
@@ -1677,44 +1717,64 @@ const TrainingGames={
   }
 
   /*
-   * 控制每回合出現的離心管對數。
+   * 題型機率：
+   *
+   * 80% 普通對向配平
+   * 10% 三邊配平
+   * 10% 可調式 Balance Tube
+   *
+   * 8、16 孔不能三等分，
+   * 抽到 threeWay 時改成普通題。
    */
-  const maxPairs=
-    holes===8
-      ?3
-      :holes===12
-        ?4
-        :holes===16
-          ?6
-          :8;
+  const modeRoll=
+    Math.random();
 
-  const pairCount=Math.min(
-    maxPairs,
-    Math.max(
-      1,
-      round+
-      Math.floor(
-        (level-8)/2
-      )
-    )
-  );
+  let balanceMode=
+    modeRoll<.80
+      ?"opposite"
+      :modeRoll<.90
+        ?"threeWay"
+        :"counterweight";
 
-  const tubeCount=pairCount*2;
+  if(
+    balanceMode==="threeWay"&&
+    holes%3!==0
+  ){
+    balanceMode="opposite";
+  }
 
-  const speedOptions=[
+  /*
+   * 隨機指定 RPM 或 ×g。
+   */
+  const targetUnit=
+    Math.random()<.5
+      ?"rpm"
+      :"g";
+
+  const rpmOptions=[
     1000,
+    1200,
     1500,
+    1800,
     2000,
     2500,
     3000
   ];
 
-  const timeOptions=[
-    3,
-    5,
-    7,
-    10
+  const gOptions=[
+    500,
+    750,
+    1000,
+    1250,
+    1500,
+    2000,
+    2500
   ];
+
+  const speedOptions=
+    targetUnit==="rpm"
+      ?rpmOptions
+      :gOptions;
 
   const targetSpeed=
     speedOptions[
@@ -1723,6 +1783,13 @@ const TrainingGames={
         speedOptions.length-1
       )
     ];
+
+  const timeOptions=[
+    3,
+    5,
+    7,
+    10
+  ];
 
   const targetTime=
     timeOptions[
@@ -1733,264 +1800,562 @@ const TrainingGames={
     ];
 
   /*
-   * 每兩支 tube 為一組，具有相同體積。
-   *
-   * Tube 1、2 為第一組
-   * Tube 3、4 為第二組
-   * Tube 5、6 為第三組
+   * 普通題可使用的 Pair 數量。
    */
-  const tubes=[];
+  const maximumPairs=
+    holes===8
+      ?3
+      :holes===12
+        ?4
+        :holes===16
+          ?6
+          :8;
 
-  for(
-    let pair=0;
-    pair<pairCount;
-    pair++
-  ){
+  const requestedPairs=
+    Math.max(
+      2,
+      round+
+      Math.floor(
+        (level-8)/2
+      )
+    );
+
+  const pairCount=
+    Math.min(
+      maximumPairs,
+      requestedPairs
+    );
+
+  let tubes=[];
+
+  /*
+   * 產生不同容量，避免多組容量完全相同。
+   */
+  const generateUniqueVolumes=count=>{
+
+    const values=
+      new Set();
+
+    while(values.size<count){
+
+      values.add(
+        randomInt(
+          1,
+          20
+        )*50
+      );
+    }
+
+    return [...values];
+  };
+
+  if(balanceMode==="opposite"){
+
+    const pairVolumes=
+      generateUniqueVolumes(
+        pairCount
+      );
+
+    const volumeList=
+      pairVolumes.flatMap(
+        volume=>[
+          volume,
+          volume
+        ]
+      );
+
+    /*
+     * 先打亂容量，再給 Tube ID。
+     */
+    tubes=
+      shuffleArray(
+        volumeList
+      ).map(
+        (volume,index)=>({
+          id:index+1,
+          volume,
+          isBalance:false
+        })
+      );
+  }
+
+  if(balanceMode==="threeWay"){
+
     const volume=
       randomInt(
         1,
         20
       )*50;
 
-    tubes.push(
+    /*
+     * 三支相同容量 Tube，
+     * 玩家需放在相隔 120° 的孔位。
+     */
+    tubes=[
       {
-        id:pair*2+1,
-        pair,
-        volume
+        id:1,
+        volume,
+        isBalance:false
       },
       {
-        id:pair*2+2,
-        pair,
-        volume
+        id:2,
+        volume,
+        isBalance:false
+      },
+      {
+        id:3,
+        volume,
+        isBalance:false
       }
-    );
+    ];
   }
 
-  /*
-   * 不再對 tubes 進行亂數洗牌。
-   * 強制依照 Tube ID 由小到大排列。
-   */
-  const orderedTubes=[
-    ...tubes
-  ].sort(
-    (a,b)=>a.id-b.id
-  );
+  if(balanceMode==="counterweight"){
 
-  let selectedTube=null;
+    /*
+     * 先建立一般成對 Tube。
+     */
+    const normalPairCount=
+      Math.max(
+        1,
+        Math.min(
+          pairCount-1,
+          Math.floor(
+            (holes-2)/2
+          )
+        )
+      );
+
+    const pairVolumes=
+      generateUniqueVolumes(
+        normalPairCount
+      );
+
+    const unmatchedVolume=
+      randomInt(
+        1,
+        20
+      )*50;
+
+    const sampleVolumes=[
+      ...pairVolumes.flatMap(
+        volume=>[
+          volume,
+          volume
+        ]
+      ),
+      unmatchedVolume
+    ];
+
+    tubes=
+      shuffleArray(
+        sampleVolumes
+      ).map(
+        (volume,index)=>({
+          id:index+1,
+          volume,
+          isBalance:false
+        })
+      );
+
+    /*
+     * 額外加入可調式 Balance Tube。
+     */
+    tubes.push({
+      id:tubes.length+1,
+      volume:0,
+      targetVolume:
+        unmatchedVolume,
+      isBalance:true
+    });
+  }
+
+  const tubeCount=
+    tubes.length;
+
+  let selectedTubeId=null;
   let spinning=false;
 
   const placements={};
 
-  /*
-   * 建立 rotor 孔位。
-   * 第 1 孔從正上方開始，接著順時針排列。
-   */
-  const rotorHolesHtml=Array.from(
-    {length:holes},
-    (_,index)=>{
-      const angle=
-        Math.PI*
-        2*
-        index/
-        holes-
-        Math.PI/2;
+  const getTube=tubeId=>
+    tubes.find(
+      tube=>tube.id===tubeId
+    )||null;
 
-      const radius=
-        holes>=24
-          ?43
-          :holes>=16
-            ?41
-            :39;
+  const getPositionForTube=tubeId=>{
 
-      const left=
-        50+
-        Math.cos(angle)*
-        radius;
+    const entry=
+      Object.entries(
+        placements
+      )
+        .find(
+          ([,placedTubeId])=>
+            Number(placedTubeId)===
+            Number(tubeId)
+        );
 
-      const top=
-        50+
-        Math.sin(angle)*
-        radius;
+    return entry
+      ?Number(entry[0])
+      :null;
+  };
 
-      const rotation=
-        360/
-        holes*
-        index+
-        90;
+  const getTubeAtPosition=position=>{
 
-      return `
-        <button
-          type="button"
-          class="rotor-hole"
-          data-hole="${index}"
-          style="
-            left:${left}%;
-            top:${top}%;
-            transform:
-              translate(-50%,-50%)
-              rotate(${rotation}deg);
-          "
-          aria-label="Rotor position ${index+1}"
-        >
-          <span
+    const tubeId=
+      placements[position];
+
+    return tubeId===undefined
+      ?null
+      :getTube(
+          Number(tubeId)
+        );
+  };
+
+  const rotorHolesHtml=
+    Array.from(
+      {
+        length:holes
+      },
+      (_,index)=>{
+
+        const angle=
+          Math.PI*
+          2*
+          index/
+          holes-
+          Math.PI/2;
+
+        const radius=
+          holes>=24
+            ?43
+            :holes>=16
+              ?41
+              :39;
+
+        const left=
+          50+
+          Math.cos(angle)*
+          radius;
+
+        const top=
+          50+
+          Math.sin(angle)*
+          radius;
+
+        const rotation=
+          360/
+          holes*
+          index+
+          90;
+
+        return `
+          <button
+            type="button"
+            class="rotor-hole"
+            data-hole="${index}"
             style="
+              left:${left}%;
+              top:${top}%;
               transform:
-                rotate(-${rotation}deg);
+                translate(-50%,-50%)
+                rotate(${rotation}deg);
             "
+            aria-label="Rotor position ${index+1}"
           >
-            ${index+1}
-          </span>
-        </button>
-      `;
-    }
-  ).join("");
-
-  /*
-   * Tube 固定顯示為：
-   * 1、2、3、4、5、6……
-   */
-  const tubeHtml=
-    orderedTubes
-      .map(tube=>`
-        <button
-          type="button"
-          class="tube-token"
-          data-tube="${tube.id}"
-          data-pair="${tube.pair}"
-          data-volume="${tube.volume}"
-        >
-          <strong>
-            Tube ${tube.id}
-          </strong>
-
-          <span>
-            ${tube.volume} μL
-          </span>
-        </button>
-      `)
+            <span
+              style="
+                transform:
+                  rotate(-${rotation}deg);
+              "
+            >
+              ${index+1}
+            </span>
+          </button>
+        `;
+      }
+    )
       .join("");
 
-  ctx.stage.innerHTML=this.shell(
-    "Centrifuge 配平",
-    `將 ${tubeCount} 支 tube 全部放入 rotor，並設定本回合的離心條件。`,
-    `
-      <div class="centrifuge-wrap">
-        <div>
-          <div
-            class="rotor rotor-${holes}"
-            id="centrifugeRotor"
+  const tubeHtml=
+    tubes
+      .map(
+        tube=>`
+          <button
+            type="button"
+            class="tube-token"
+            data-tube="${tube.id}"
+            data-balance="${
+              tube.isBalance
+                ?"true"
+                :"false"
+            }"
           >
-            ${rotorHolesHtml}
+            <strong>
+              ${
+                tube.isBalance
+                  ?"Balance Tube"
+                  :`Tube ${tube.id}`
+              }
+            </strong>
+
+            <span
+              data-tube-volume-display="${tube.id}"
+            >
+              ${
+                tube.isBalance
+                  ?"請設定容量"
+                  :`${tube.volume} μL`
+              }
+            </span>
+          </button>
+        `
+      )
+      .join("");
+
+  const modeDescription=
+    balanceMode==="threeWay"
+      ?"將三支相同容量 Tube 放在彼此相隔 120° 的孔位。"
+      :balanceMode==="counterweight"
+        ?"有一支樣本 Tube 沒有配對，請設定 Balance Tube 容量並完成對向配平。"
+        :"每支 Tube 的正對面必須放置一支相同容量的 Tube。";
+
+  const modeTitle=
+    balanceMode==="threeWay"
+      ?"THREE-WAY BALANCE"
+      :balanceMode==="counterweight"
+        ?"ADJUSTABLE BALANCE TUBE"
+        :"OPPOSITE BALANCE";
+
+  ctx.stage.innerHTML=
+    this.shell(
+      "Centrifuge 配平",
+
+      `
+        將所有 Tube 放入 ${holes} 孔 Rotor，
+        選擇正確的速度單位並設定離心條件。
+      `,
+
+      `
+        <div class="centrifuge-wrap">
+
+          <div>
+
+            <div
+              class="rotor rotor-${holes}"
+              id="centrifugeRotor"
+            >
+              ${rotorHolesHtml}
+            </div>
+
           </div>
+
+          <div>
+
+            <div
+              class="bench-card"
+              style="
+                position:static;
+                margin-bottom:12px;
+              "
+            >
+
+              <span class="kicker">
+                ${modeTitle}
+              </span>
+
+              <p>
+                <strong>
+                  ${targetSpeed}
+                  ${
+                    targetUnit==="rpm"
+                      ?"RPM"
+                      :"×g"
+                  }
+                </strong>
+
+                ／
+
+                <strong>
+                  ${targetTime} min
+                </strong>
+              </p>
+
+              <small>
+                ${modeDescription}
+              </small>
+
+            </div>
+
+            ${
+              balanceMode==="counterweight"
+                ?`
+                  <div
+                    class="bench-card"
+                    style="
+                      position:static;
+                      margin-bottom:12px;
+                    "
+                  >
+
+                    <span class="kicker">
+                      BALANCE TUBE VOLUME
+                    </span>
+
+                    <label>
+
+                      輸入 Balance Tube 容量
+
+                      <div
+                        style="
+                          display:grid;
+                          grid-template-columns:1fr auto;
+                          gap:8px;
+                          align-items:center;
+                          margin-top:8px;
+                        "
+                      >
+
+                        <input
+                          type="number"
+                          id="balanceTubeVolume"
+                          min="0"
+                          max="1000"
+                          step="50"
+                          value="0"
+                        >
+
+                        <span>μL</span>
+
+                      </div>
+
+                    </label>
+
+                  </div>
+                `
+                :""
+            }
+
+            <div
+              class="tube-bank"
+              style="
+                display:flex;
+                flex-direction:row;
+                flex-wrap:wrap;
+                direction:ltr;
+              "
+            >
+              ${tubeHtml}
+            </div>
+
+          </div>
+
         </div>
 
-        <div>
-          <div
-            class="bench-card"
-            style="
-              position:static;
-              margin-bottom:12px;
-            "
-          >
-            <span class="kicker">
-              任務條件
-            </span>
-
-            <p>
-              <strong>
-                ${targetSpeed} ×g
-              </strong>
-
-              ／
-
-              <strong>
-                ${targetTime} min
-              </strong>
-            </p>
-
-            <small>
-              正對面的 tube 必須具有相同容量。
-            </small>
-          </div>
-
-          <div
-            class="tube-bank"
-            style="
-              display:flex;
-              flex-direction:row;
-              flex-wrap:wrap;
-              direction:ltr;
-            "
-          >
-            ${tubeHtml}
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="parameter-grid"
-        style="margin-top:18px;"
-      >
-        <label>
-          離心力
-
-          <strong>
-            <span id="gText">
-              500
-            </span>
-            ×g
-          </strong>
-
-          <input
-            id="gForce"
-            type="range"
-            min="500"
-            max="3000"
-            step="500"
-            value="500"
-          >
-        </label>
-
-        <label>
-          時間
-
-          <strong id="timeText">
-            1 min
-          </strong>
-
-          <input
-            id="spinTime"
-            type="range"
-            min="1"
-            max="10"
-            step="1"
-            value="1"
-          >
-        </label>
-      </div>
-
-      <div class="controls">
-        <button
-          type="button"
-          id="spinBtn"
-          class="btn btn-primary btn-large"
+        <div
+          class="parameter-grid"
+          style="margin-top:18px;"
         >
-          啟動離心機
-        </button>
-      </div>
-    `
-  );
 
-  const stage=ctx.stage;
+          <label>
+
+            速度單位
+
+            <select
+              id="centrifugeUnit"
+              style="
+                width:100%;
+                margin-top:8px;
+                padding:9px;
+                border:1px solid var(--line);
+                border-radius:9px;
+              "
+            >
+              <option value="">
+                請選擇
+              </option>
+
+              <option value="rpm">
+                RPM
+              </option>
+
+              <option value="g">
+                ×g
+              </option>
+            </select>
+
+          </label>
+
+          <label>
+
+            離心速度
+
+            <strong id="speedText">
+              500
+            </strong>
+
+            <input
+              id="centrifugeSpeed"
+              type="range"
+              min="500"
+              max="3000"
+              step="250"
+              value="500"
+            >
+
+          </label>
+
+          <label>
+
+            時間
+
+            <strong id="timeText">
+              1 min
+            </strong>
+
+            <input
+              id="spinTime"
+              type="range"
+              min="1"
+              max="10"
+              step="1"
+              value="1"
+            >
+
+          </label>
+
+        </div>
+
+        <div class="controls">
+
+          <button
+            type="button"
+            id="spinBtn"
+            class="btn btn-primary btn-large"
+          >
+            啟動離心機
+          </button>
+
+        </div>
+      `
+    );
+
+  const stage=
+    ctx.stage;
 
   const rotor=
     stage.querySelector(
       "#centrifugeRotor"
     );
 
-  const gForce=
+  const speedInput=
     stage.querySelector(
-      "#gForce"
+      "#centrifugeSpeed"
+    );
+
+  const unitInput=
+    stage.querySelector(
+      "#centrifugeUnit"
     );
 
   const spinTime=
@@ -1998,9 +2363,9 @@ const TrainingGames={
       "#spinTime"
     );
 
-  const gText=
+  const speedText=
     stage.querySelector(
-      "#gText"
+      "#speedText"
     );
 
   const timeText=
@@ -2013,186 +2378,390 @@ const TrainingGames={
       "#spinBtn"
     );
 
-  /*
-   * 選擇離心管。
-   */
+  const balanceVolumeInput=
+    stage.querySelector(
+      "#balanceTubeVolume"
+    );
+
+  const resetHoleDisplay=(
+    hole,
+    position
+  )=>{
+
+    const rotation=
+      360/
+      holes*
+      position+
+      90;
+
+    hole.classList.remove(
+      "filled"
+    );
+
+    hole.innerHTML=`
+      <span
+        style="
+          transform:
+            rotate(-${rotation}deg);
+        "
+      >
+        ${position+1}
+      </span>
+    `;
+
+    hole.title="";
+  };
+
+  const updateTubeButtons=()=>{
+
+    stage
+      .querySelectorAll(
+        ".tube-token"
+      )
+      .forEach(
+        button=>{
+
+          const tubeId=
+            Number(
+              button.dataset.tube
+            );
+
+          const placed=
+            getPositionForTube(
+              tubeId
+            )!==null;
+
+          button.disabled=
+            placed||
+            spinning;
+
+          button.classList.toggle(
+            "selected",
+            selectedTubeId===tubeId
+          );
+        }
+      );
+  };
+
+  if(balanceVolumeInput){
+
+    balanceVolumeInput.addEventListener(
+      "input",
+      ()=>{
+
+        const balanceTube=
+          tubes.find(
+            tube=>tube.isBalance
+          );
+
+        if(!balanceTube){
+          return;
+        }
+
+        balanceTube.volume=
+          Math.max(
+            0,
+            Number(
+              balanceVolumeInput.value
+            )||0
+          );
+
+        const display=
+          stage.querySelector(
+            `[data-tube-volume-display="${balanceTube.id}"]`
+          );
+
+        if(display){
+
+          display.textContent=
+            `${balanceTube.volume} μL`;
+        }
+      }
+    );
+  }
+
   stage
     .querySelectorAll(
       ".tube-token"
     )
-    .forEach(button=>{
-      button.addEventListener(
-        "click",
-        ()=>{
-          if(
-            button.disabled||
-            spinning
-          ){
-            return;
-          }
+    .forEach(
+      button=>{
 
-          stage
-            .querySelectorAll(
-              ".tube-token"
-            )
-            .forEach(item=>{
-              item.classList.remove(
-                "selected"
+        button.addEventListener(
+          "click",
+          ()=>{
+
+            if(
+              button.disabled||
+              spinning
+            ){
+              return;
+            }
+
+            const tubeId=
+              Number(
+                button.dataset.tube
               );
-            });
 
-          button.classList.add(
-            "selected"
-          );
+            selectedTubeId=
+              selectedTubeId===tubeId
+                ?null
+                :tubeId;
 
-          selectedTube=button;
-        }
-      );
-    });
+            updateTubeButtons();
+          }
+        );
+      }
+    );
 
-  /*
-   * 將選取的離心管放進 rotor。
-   */
   stage
     .querySelectorAll(
       ".rotor-hole"
     )
-    .forEach(hole=>{
-      hole.addEventListener(
-        "click",
-        ()=>{
-          if(spinning){
-            return;
-          }
+    .forEach(
+      hole=>{
 
-          if(!selectedTube){
-            ctx.penalize(
-              "safety",
-              8,
-              "請先選擇一支 tube。"
-            );
+        hole.addEventListener(
+          "click",
+          ()=>{
 
-            return;
-          }
+            if(spinning){
+              return;
+            }
 
-          if(
-            hole.classList.contains(
+            const position=
+              Number(
+                hole.dataset.hole
+              );
+
+            /*
+             * 點擊已放置孔位時取回 Tube。
+             */
+            if(
+              placements[position]!==undefined
+            ){
+
+              delete placements[position];
+
+              resetHoleDisplay(
+                hole,
+                position
+              );
+
+              selectedTubeId=null;
+              updateTubeButtons();
+
+              return;
+            }
+
+            if(selectedTubeId===null){
+
+              ctx.penalize(
+                "safety",
+                8,
+                "請先選擇一支 Tube。"
+              );
+
+              return;
+            }
+
+            const tube=
+              getTube(
+                selectedTubeId
+              );
+
+            if(!tube){
+              return;
+            }
+
+            if(
+              tube.isBalance&&
+              Number(tube.volume)<=0
+            ){
+
+              ctx.penalize(
+                "accuracy",
+                8,
+                "請先設定 Balance Tube 容量。"
+              );
+
+              return;
+            }
+
+            placements[position]=
+              tube.id;
+
+            hole.classList.add(
               "filled"
-            )
-          ){
-            return;
+            );
+
+            const rotation=
+              360/
+              holes*
+              position+
+              90;
+
+            hole.innerHTML=`
+              <strong
+                style="
+                  transform:
+                    rotate(-${rotation}deg);
+                "
+              >
+                ${
+                  tube.isBalance
+                    ?"B"
+                    :tube.id
+                }
+              </strong>
+            `;
+
+            hole.title=
+              `${
+                tube.isBalance
+                  ?"Balance Tube"
+                  :`Tube ${tube.id}`
+              }：${tube.volume} μL`;
+
+            selectedTubeId=null;
+            updateTubeButtons();
           }
+        );
+      }
+    );
 
-          const position=
-            Number(
-              hole.dataset.hole
-            );
-
-          const tubeId=
-            Number(
-              selectedTube.dataset.tube
-            );
-
-          const pair=
-            Number(
-              selectedTube.dataset.pair
-            );
-
-          const volume=
-            Number(
-              selectedTube.dataset.volume
-            );
-
-          placements[position]={
-            tubeId,
-            pair,
-            volume
-          };
-
-          hole.classList.add(
-            "filled"
-          );
-
-          const rotation=
-            360/
-            holes*
-            position+
-            90;
-
-          hole.innerHTML=`
-            <strong
-              style="
-                transform:
-                  rotate(-${rotation}deg);
-              "
-            >
-              ${tubeId}
-            </strong>
-          `;
-
-          hole.title=
-            `Tube ${tubeId}：${volume} μL`;
-
-          selectedTube.disabled=true;
-
-          selectedTube.classList.remove(
-            "selected"
-          );
-
-          selectedTube=null;
-        }
-      );
-    });
-
-  /*
-   * 更新離心力文字。
-   */
-  gForce.addEventListener(
+  speedInput.addEventListener(
     "input",
     ()=>{
-      gText.textContent=
-        gForce.value;
+
+      speedText.textContent=
+        speedInput.value;
     }
   );
 
-  /*
-   * 更新時間文字。
-   */
   spinTime.addEventListener(
     "input",
     ()=>{
+
       timeText.textContent=
         `${spinTime.value} min`;
     }
   );
 
-  /*
-   * 啟動離心機並進行評分。
-   */
+  const validateOppositeBalance=()=>{
+
+    const positions=
+      Object.keys(
+        placements
+      ).map(Number);
+
+    return positions.every(
+      position=>{
+
+        const oppositePosition=
+          (
+            position+
+            holes/2
+          )%holes;
+
+        const current=
+          getTubeAtPosition(
+            position
+          );
+
+        const opposite=
+          getTubeAtPosition(
+            oppositePosition
+          );
+
+        return Boolean(
+          current&&
+          opposite&&
+          Number(current.volume)===
+          Number(opposite.volume)
+        );
+      }
+    );
+  };
+
+  const validateThreeWayBalance=()=>{
+
+    const positions=
+      Object.keys(
+        placements
+      )
+        .map(Number)
+        .sort(
+          (first,second)=>
+            first-second
+        );
+
+    if(positions.length!==3){
+      return false;
+    }
+
+    const tubesAtPositions=
+      positions.map(
+        position=>
+          getTubeAtPosition(
+            position
+          )
+      );
+
+    if(
+      tubesAtPositions.some(
+        tube=>!tube
+      )
+    ){
+      return false;
+    }
+
+    const sameVolume=
+      tubesAtPositions.every(
+        tube=>
+          Number(tube.volume)===
+          Number(
+            tubesAtPositions[0].volume
+          )
+      );
+
+    if(!sameVolume){
+      return false;
+    }
+
+    const expectedGap=
+      holes/3;
+
+    const gaps=[
+      positions[1]-positions[0],
+      positions[2]-positions[1],
+      positions[0]+holes-positions[2]
+    ];
+
+    return gaps.every(
+      gap=>gap===expectedGap
+    );
+  };
+
   spinButton.addEventListener(
     "click",
     ()=>{
+
       if(spinning){
         return;
       }
 
-      const positions=
+      const placedCount=
         Object.keys(
           placements
-        ).map(Number);
+        ).length;
 
-      /*
-       * 所有 tube 都必須放進 rotor。
-       * 未放完時不結束回合。
-       */
-      if(
-        positions.length!==
-        tubeCount
-      ){
+      if(placedCount!==tubeCount){
+
         ctx.penalize(
           "safety",
           12,
-          "尚有 tube 未放入 rotor。"
+          "尚有 Tube 未放入 Rotor。"
         );
 
         return;
@@ -2200,40 +2769,27 @@ const TrainingGames={
 
       const issues=[];
 
-      /*
-       * 檢查每個位置的正對面是否存在
-       * 相同容量的離心管。
-       */
-      const balanced=
-        positions.every(
-          position=>{
-            const oppositePosition=
-              (
-                position+
-                holes/2
-              )%holes;
+      let balanced=false;
 
-            const current=
-              placements[position];
+      if(balanceMode==="threeWay"){
 
-            const opposite=
-              placements[
-                oppositePosition
-              ];
+        balanced=
+          validateThreeWayBalance();
 
-            return Boolean(
-              opposite&&
-              current.volume===
-              opposite.volume
-            );
-          }
-        );
+      }else{
+
+        balanced=
+          validateOppositeBalance();
+      }
 
       if(!balanced){
+
         ctx.penalize(
           "safety",
           45,
-          "離心機未配平。"
+          balanceMode==="threeWay"
+            ?"三支 Tube 未形成正確的三邊配平。"
+            :"離心機未正確配平。"
         );
 
         issues.push(
@@ -2242,10 +2798,54 @@ const TrainingGames={
       }
 
       if(
+        balanceMode==="counterweight"
+      ){
+
+        const balanceTube=
+          tubes.find(
+            tube=>tube.isBalance
+          );
+
+        if(
+          !balanceTube||
+          Number(balanceTube.volume)!==
+          Number(balanceTube.targetVolume)
+        ){
+
+          ctx.penalize(
+            "accuracy",
+            20,
+            "Balance Tube 容量設定錯誤。"
+          );
+
+          issues.push(
+            "Wrong balance tube volume"
+          );
+        }
+      }
+
+      if(
+        unitInput.value!==
+        targetUnit
+      ){
+
+        ctx.penalize(
+          "accuracy",
+          18,
+          "離心速度單位選擇錯誤。"
+        );
+
+        issues.push(
+          "Wrong speed unit"
+        );
+      }
+
+      if(
         Number(
-          gForce.value
+          speedInput.value
         )!==targetSpeed
       ){
+
         ctx.penalize(
           "sampleQuality",
           16,
@@ -2262,6 +2862,7 @@ const TrainingGames={
           spinTime.value
         )!==targetTime
       ){
+
         ctx.penalize(
           "sampleQuality",
           16,
@@ -2282,6 +2883,7 @@ const TrainingGames={
 
       setTimeout(
         ()=>{
+
           rotor.classList.remove(
             "spinning"
           );
