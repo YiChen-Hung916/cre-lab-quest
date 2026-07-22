@@ -209,7 +209,6 @@ const Boss20={
 
     passed:false
 
-}
       },
 
       currentRound:1,
