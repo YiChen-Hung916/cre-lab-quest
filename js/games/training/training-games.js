@@ -961,14 +961,14 @@ const TrainingGames={
      * Centrifuge
      */
     if(level<=11){
-        return 4;
+        return 3;
     }
 
     /*
      * Question Bank
      */
     if(level<=14){
-        return 3;
+        return 4;
     }
 
     /*
