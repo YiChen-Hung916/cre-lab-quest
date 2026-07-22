@@ -2260,72 +2260,81 @@ const Boss20={
   state.transfer;
 
 /*
- * Round 2 V2
+ * Round 2 V3
  *
- * 只從 Round 1 配好的整瓶 Complete DMEM 中，
- * 分裝本次實驗需要的一部分。
+ * 隨機建立 4 組不同容量，每組各 2 支 Tube。
+ * 容量範圍為 1–50 mL。
  *
- * 不要求把整瓶培養基全部用完。
- *
- * Tube 必須成對，讓 Round 3 可以進行配平。
+ * 建立完成後再打亂容量與 Tube ID 的對應，
+ * 因此相同容量不會固定相鄰。
  */
 if(
-  transfer.challengeVersion!==2
+  transfer.challengeVersion!==3
 ){
 
-  const pairedVolumes=[
-    1,
-    5,
-    10,
-    25
-  ];
+  const uniqueVolumes=
+    new Set();
 
-  transfer.tubes=
-    pairedVolumes
+  while(uniqueVolumes.size<4){
+
+    uniqueVolumes.add(
+      this.randomInt(
+        1,
+        50
+      )
+    );
+  }
+
+  /*
+   * 每個容量複製兩次。
+   *
+   * 例如：
+   * 3、17、28、46
+   *
+   * 會變成：
+   * 3、3、17、17、28、28、46、46
+   */
+  const pairedVolumes=
+    [...uniqueVolumes]
       .flatMap(
-        (volume,pairIndex)=>[
-          {
-            id:
-              pairIndex*2+1,
-
-            volume:
-              volume,
-
-            transferredVolume:
-              0,
-
-            filled:
-              false
-          },
-          {
-            id:
-              pairIndex*2+2,
-
-            volume:
-              volume,
-
-            transferredVolume:
-              0,
-
-            filled:
-              false
-          }
+        volume=>[
+          volume,
+          volume
         ]
       );
 
-  transfer.challengeVersion=2;
+  /*
+   * 先打亂容量，再依序給 Tube 1–8。
+   */
+  const shuffledVolumes=
+    this.shuffle(
+      pairedVolumes
+    );
+
+  transfer.tubes=
+    shuffledVolumes.map(
+      (volume,index)=>({
+        id:index+1,
+        volume,
+        transferredVolume:0,
+        filled:false,
+        centrifuged:false,
+        rotorPosition:null
+      })
+    );
+
+  transfer.challengeVersion=3;
   transfer.passed=false;
   transfer.selectedTubeId=null;
   transfer.selectedPipette=null;
   transfer.setVolume=0;
 
   /*
-   * 切換新版題目時，
-   * 清除舊版 24 孔離心資料。
+   * Tube 題目重新生成後，
+   * Round 3 的 Rotor 資料也必須清除。
    */
   state.centrifuge=null;
 }
-
 /*
  * 固定按照 Tube 1、Tube 2、Tube 3……
  * 顯示，不打亂順序。
@@ -5425,579 +5434,227 @@ if(
    **************************************************************************/
 
   round4(ctx){
-    const state=
-      this.state;
-    state.currentRound=4;
 
-    /**********************************************************************
-     * Round 3 未完成時，不允許進入標示步驟
-     **********************************************************************/
+  const state=
+    this.state;
 
-    if(
-      !state.centrifuge||
-      !state.centrifuge.passed
-    ){
+  state.currentRound=4;
 
-      this.failMission(
-        ctx,
-        [
-          "Round 3 的離心步驟尚未正確完成。",
-          "無法進行 Complete DMEM 標籤製作。"
-        ],
-        {
-          penalties:[]
-        }
+  if(
+    !state.centrifuge||
+    !state.centrifuge.passed
+  ){
+
+    this.failMission(
+      ctx,
+      [
+        "Round 3 的離心步驟尚未正確完成。",
+        "無法進行 Complete DMEM 標籤製作。"
+      ],
+      {
+        penalties:[]
+      }
+    );
+
+    return;
+  }
+
+  if(!state.labeling){
+
+    state.labeling={
+      selectedItems:[],
+      passed:false
+    };
+  }
+
+  if(!state.bottle.label){
+
+    state.bottle.label={};
+  }
+
+  const labeling=
+    state.labeling;
+
+  const label=
+    state.bottle.label;
+
+  /*
+   * 清除舊版已儲存欄位。
+   */
+  delete label.operatorInitials;
+  delete label.storage;
+
+  let locked=false;
+
+  const correctLabel={
+    mediumName:"Complete DMEM",
+    totalVolume:
+      this.displayNumber(
+        state.totalVolume
+      ),
+    fbs:"10",
+    penStrep:"1"
+  };
+
+  const normalizeDate=value=>{
+
+    if(!value){
+      return "";
+    }
+
+    const date=
+      new Date(
+        `${value}T00:00:00`
       );
 
+    if(
+      Number.isNaN(
+        date.getTime()
+      )
+    ){
+      return "";
+    }
+
+    const year=
+      date.getFullYear();
+
+    const month=
+      String(
+        date.getMonth()+1
+      ).padStart(
+        2,
+        "0"
+      );
+
+    const day=
+      String(
+        date.getDate()
+      ).padStart(
+        2,
+        "0"
+      );
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const getValue=id=>{
+
+    const input=
+      ctx.stage.querySelector(
+        id
+      );
+
+    return input
+      ?input.value.trim()
+      :"";
+  };
+
+  const readLabelValues=()=>({
+
+    mediumName:
+      getValue(
+        "#boss20LabelMediumName"
+      ),
+
+    totalVolume:
+      getValue(
+        "#boss20LabelTotalVolume"
+      ),
+
+    fbs:
+      getValue(
+        "#boss20LabelFbs"
+      ),
+
+    penStrep:
+      getValue(
+        "#boss20LabelPenStrep"
+      ),
+
+    preparationDate:
+      getValue(
+        "#boss20LabelDate"
+      )
+  });
+
+  const saveLabelValues=()=>{
+
+    const values=
+      readLabelValues();
+
+    Object.assign(
+      label,
+      values
+    );
+
+    labeling.selectedItems=
+      Object.entries(
+        values
+      )
+        .filter(
+          ([,value])=>
+            String(value).trim()!==""
+        )
+        .map(
+          ([name])=>name
+        );
+  };
+
+  const setMessage=(
+    message,
+    type=""
+  )=>{
+
+    const box=
+      ctx.stage.querySelector(
+        "#boss20LabelMessage"
+      );
+
+    if(!box){
       return;
     }
 
+    box.classList.remove(
+      "success",
+      "warning",
+      "error"
+    );
 
-    /**********************************************************************
-     * 建立／延續標籤狀態
-     **********************************************************************/
-
-    if(!state.labeling){
-
-      state.labeling={
-        selectedItems:[],
-        passed:false
-      };
+    if(type){
+      box.classList.add(type);
     }
 
-    if(!state.bottle.label){
+    box.innerHTML=
+      message;
+  };
 
-      state.bottle.label={
-        mediumName:"",
-        totalVolume:"",
-        fbs:"",
-        penStrep:"",
-        preparationDate:"",
-        operatorInitials:"",
-        storage:""
-      };
+  const markField=(
+    id,
+    valid
+  )=>{
+
+    const input=
+      ctx.stage.querySelector(
+        id
+      );
+
+    if(!input){
+      return;
     }
 
-    const labeling=
-      state.labeling;
-    const label=
-      state.bottle.label;
-    let locked=false;
+    input.classList.remove(
+      "boss20-field-valid",
+      "boss20-field-invalid"
+    );
 
-
-    /**********************************************************************
-     * 正確標籤內容
-     **********************************************************************/
-
-    const correctLabel={
-
-      mediumName:
-        "Complete DMEM",
-
-      totalVolume:
-        `${this.displayNumber(
-          state.totalVolume
-        )} mL`,
-
-      fbs:
-        "10% FBS",
-      penStrep:
-        "1% Pen/Strep",
-      storage:
-        "4°C"
-    };
-
-
-    /**********************************************************************
-     * 將 Date 轉成 YYYY-MM-DD
-     **********************************************************************/
-
-    const normalizeDate=value=>{
-
-      if(!value){
-        return "";
-      }
-
-      const date=
-        new Date(
-          `${value}T00:00:00`
-        );
-
-      if(
-        Number.isNaN(
-          date.getTime()
-        )
-      ){
-        return "";
-      }
-
-      const year=
-        date.getFullYear();
-
-      const month=
-        String(
-          date.getMonth()+1
-        ).padStart(
-          2,
-          "0"
-        );
-
-      const day=
-        String(
-          date.getDate()
-        ).padStart(
-          2,
-          "0"
-        );
-
-      return `${year}-${month}-${day}`;
-    };
-
-
-    /**********************************************************************
-     * 取得輸入值
-     **********************************************************************/
-
-    const readLabelValues=()=>{
-      const getValue=id=>{
-        const input=
-          ctx.stage.querySelector(
-            id
-          );
-        return input
-          ?input.value.trim()
-          :"";
-      };
-
-      return{
-        mediumName:
-          getValue(
-            "#boss20LabelMediumName"
-          ),
-        totalVolume:
-          getValue(
-            "#boss20LabelTotalVolume"
-          ),
-        fbs:
-          getValue(
-            "#boss20LabelFbs"
-          ),
-
-        penStrep:
-          getValue(
-            "#boss20LabelPenStrep"
-          ),
-
-        preparationDate:
-          getValue(
-            "#boss20LabelDate"
-          ),
-        operatorInitials:
-          getValue(
-            "#boss20LabelInitials"
-          ),
-        storage:
-          getValue(
-            "#boss20LabelStorage"
-          )
-      };
-    };
-
-
-    /**********************************************************************
-     * 保存輸入內容
-     **********************************************************************/
-
-    const saveLabelValues=()=>{
-      const values=
-        readLabelValues();
-      Object.assign(
-        label,
-        values
-      );
-
-      labeling.selectedItems=
-        Object.entries(values)
-          .filter(
-            ([,value])=>
-              String(value).trim()!==""
-          )
-          .map(
-            ([name])=>name
-          );
-    };
-
-
-    /**********************************************************************
-     * 顯示訊息
-     **********************************************************************/
-
-    const setMessage=(
-      message,
-      type=""
-    )=>{
-
-      const box=
-        ctx.stage.querySelector(
-          "#boss20LabelMessage"
-        );
-
-      if(!box){
-        return;
-      }
-
-      box.classList.remove(
-        "success",
-        "warning",
-        "error"
-      );
-
-      if(type){
-        box.classList.add(type);
-      }
-
-      box.innerHTML=
-        message;
-    };
-
-
-    /**********************************************************************
-     * 更新標籤預覽
-     **********************************************************************/
-
-    const updatePreview=()=>{
-
-      saveLabelValues();
-
-      const preview=
-        ctx.stage.querySelector(
-          "#boss20LabelPreview"
-        );
-
-      if(!preview){
-        return;
-      }
-
-      const previewLabel={
-
-        mediumName:
-          label.mediumName||
-          "Medium name",
-
-        totalVolume:
-          label.totalVolume||
-          "Total volume",
-
-        fbs:
-          label.fbs||
-          "FBS concentration",
-
-        penStrep:
-          label.penStrep||
-          "Pen/Strep concentration",
-
-        preparationDate:
-          normalizeDate(
-            label.preparationDate
-          ),
-
-        operatorInitials:
-          label.operatorInitials||
-          "Operator",
-
-        storage:
-          label.storage||
-          "Storage"
-      };
-
-      preview.innerHTML=
-        this.bottleHtml({
-          currentVolume:0,
-          showLabel:true,
-          label:previewLabel
-        });
-    };
-
-
-    /**********************************************************************
-     * 設定輸入欄位成功／錯誤樣式
-     **********************************************************************/
-
-    const markField=(
-      id,
+    input.classList.add(
       valid
-    )=>{
+        ?"boss20-field-valid"
+        :"boss20-field-invalid"
+    );
+  };
 
-      const input=
-        ctx.stage.querySelector(
-          id
-        );
-
-      if(!input){
-        return;
-      }
-
-      input.classList.remove(
-        "boss20-field-valid",
-        "boss20-field-invalid"
-      );
-
-      input.classList.add(
-        valid
-          ?"boss20-field-valid"
-          :"boss20-field-invalid"
-      );
-    };
-
-
-    /**********************************************************************
-     * 清除欄位檢查樣式
-     **********************************************************************/
-
-    const clearFieldMarks=()=>{
-
-      ctx.stage
-        .querySelectorAll(
-          ".boss20-label-form input"
-        )
-        .forEach(
-          input=>{
-
-            input.classList.remove(
-              "boss20-field-valid",
-              "boss20-field-invalid"
-            );
-          }
-        );
-    };
-
-
-    /**********************************************************************
-     * Round 4 主畫面
-     **********************************************************************/
-
-    ctx.stage.innerHTML=
-      this.game.shell(
-        "Label Complete DMEM",
-
-        `
-          為處理完成的 Complete DMEM 製作標籤。
-          標籤必須包含培養基名稱、總體積、添加物濃度、
-          製備日期、操作者縮寫與保存條件。
-        `,
-
-        `
-          <div class="boss20-round boss20-round4">
-            <section class="boss20-label-summary">
-              <div class="boss20-label-requirement">
-                <span class="kicker">
-                  LABEL REQUIREMENTS
-                </span>
-
-                <strong>Complete DMEM Bottle</strong>
-                <ul>
-                  <li>培養基名稱</li>
-                  <li>總體積</li>
-                  <li>FBS 濃度</li>
-                  <li>Pen/Strep 濃度</li>
-                  <li>製備日期</li>
-                  <li>操作者縮寫</li>
-                  <li>保存條件</li>
-                </ul>
-
-              </div>
-
-              <div class="boss20-label-warning">
-
-                <span class="kicker">
-                  IMPORTANT
-                </span>
-
-                <strong>標籤錯誤將造成樣本辨識風險</strong>
-
-                <p>
-                  確認標籤後若有任何資料錯誤，
-                  Boss 任務將立即失敗。
-                </p>
-
-              </div>
-
-            </section>
-
-            <div class="boss20-label-layout">
-
-              <section class="boss20-label-form-panel">
-                <div class="boss20-section-heading">
-                  <div>
-                    <span class="kicker">
-                      LABEL INFORMATION
-                    </span>
-
-                    <strong>輸入標籤內容</strong>
-
-                  </div>
-
-                  <small>所有欄位皆為必填</small>
-                </div>
-
-                <div class="boss20-label-form">
-                  <label class="boss20-label-field">
-
-                    <span>Medium name</span>
-                    <input
-                      type="text"
-                      id="boss20LabelMediumName"
-                      value="${this.escapeHtml(
-                        label.mediumName
-                      )}"
-                      placeholder="例如：Complete DMEM"
-                      autocomplete="off"
-                    >
-
-                  </label>
-
-                  <label class="boss20-label-field">
-                    <span>Total volume</span>
-                    <input
-                      type="text"
-                      id="boss20LabelTotalVolume"
-                      value="${this.escapeHtml(
-                        label.totalVolume
-                      )}"
-                      placeholder="例如：500 mL"
-                      autocomplete="off"
-                    >
-
-                  </label>
-
-                  <label class="boss20-label-field">
-                    <span>FBS</span>
-                    <input
-                      type="text"
-                      id="boss20LabelFbs"
-                      value="${this.escapeHtml(
-                        label.fbs
-                      )}"
-                      placeholder="例如：10% FBS"
-                      autocomplete="off"
-                    >
-
-                  </label>
-
-                  <label class="boss20-label-field">
-                    <span>Pen/Strep</span>
-                    <input
-                      type="text"
-                      id="boss20LabelPenStrep"
-                      value="${this.escapeHtml(
-                        label.penStrep
-                      )}"
-                      placeholder="例如：1% Pen/Strep"
-                      autocomplete="off"
-                    >
-                  </label>
-
-                  <label class="boss20-label-field">
-                    <span>Preparation date</span>
-                    <input
-                      type="date"
-                      id="boss20LabelDate"
-                      value="${this.escapeHtml(
-                        label.preparationDate
-                      )}"
-                    >
-
-                  </label>
-
-                  <label class="boss20-label-field">
-                    <span>Operator initials</span>
-                    <input
-                      type="text"
-                      id="boss20LabelInitials"
-                      value="${this.escapeHtml(
-                        label.operatorInitials
-                      )}"
-                      maxlength="6"
-                      placeholder="例如：YCH"
-                      autocomplete="off"
-                    >
-
-                  </label>
-                  <label class="boss20-label-field">
-                    <span>Storage</span>
-                    <input
-                      type="text"
-                      id="boss20LabelStorage"
-                      value="${this.escapeHtml(
-                        label.storage
-                      )}"
-                      placeholder="例如：4°C"
-                      autocomplete="off"
-                    >
-                  </label>
-
-                </div>
-
-              </section>
-
-              <section class="boss20-label-preview-panel">
-                <div class="boss20-section-heading">
-                  <div>
-
-                    <span class="kicker">
-                      LIVE PREVIEW
-                    </span>
-
-                    <strong>Bottle Label Preview</strong>
-                  </div>
-
-                  <small>輸入時即時更新</small>
-                </div>
-
-                <div
-                  id="boss20LabelPreview"
-                  class="boss20-label-preview"
-                ></div>
-
-              </section>
-
-            </div>
-
-
-            <div
-              id="boss20LabelMessage"
-              class="notice"
-              aria-live="polite"
-            >
-              請依照本次 Complete DMEM 配方填寫完整標籤。
-            </div>
-
-            <div class="controls">
-
-              <button
-                type="button"
-                id="boss20ConfirmLabel"
-                class="btn btn-primary btn-large"
-              >
-                貼上標籤並確認
-              </button>
-
-            </div>
-
-          </div>
-        `
-      );
-
-
-    /**********************************************************************
-     * 初始化標籤預覽
-     **********************************************************************/
-
-    updatePreview();
-
-    /**********************************************************************
-     * 所有輸入欄位即時更新
-     **********************************************************************/
+  const clearFieldMarks=()=>{
 
     ctx.stage
       .querySelectorAll(
@@ -6005,427 +5662,619 @@ if(
       )
       .forEach(
         input=>{
-          input.addEventListener(
-            "input",
-            ()=>{
 
-              if(
-                locked||
-                this.missionFailed
-              ){
-                return;
-              }
-
-              input.classList.remove(
-                "boss20-field-valid",
-                "boss20-field-invalid"
-              );
-
-              /*
-               * 操作者縮寫統一轉為大寫，
-               * 並移除空白。
-               */
-              if(
-                input.id===
-                "boss20LabelInitials"
-              ){
-
-                input.value=
-                  input.value
-                    .toUpperCase()
-                    .replaceAll(
-                      " ",
-                      ""
-                    );
-              }
-
-              updatePreview();
-            }
-          );
-
-          input.addEventListener(
-            "change",
-            ()=>{
-
-              if(
-                locked||
-                this.missionFailed
-              ){
-                return;
-              }
-
-              updatePreview();
-            }
+          input.classList.remove(
+            "boss20-field-valid",
+            "boss20-field-invalid"
           );
         }
       );
+  };
 
+  const updatePreview=()=>{
 
-    /**********************************************************************
-     * 確認標籤
-     **********************************************************************/
+    saveLabelValues();
 
-    const confirmButton=
+    const preview=
       ctx.stage.querySelector(
-        "#boss20ConfirmLabel"
+        "#boss20LabelPreview"
       );
 
-    confirmButton.addEventListener(
-      "click",
-      ()=>{
+    if(!preview){
+      return;
+    }
 
-        if(
-          locked||
-          this.missionFailed
-        ){
-          return;
-        }
+    const mediumText=
+      label.mediumName||
+      "Medium name";
 
-        clearFieldMarks();
-        saveLabelValues();
+    const volumeText=
+      label.totalVolume
+        ?`${label.totalVolume} mL`
+        :"Total volume";
 
-        const values=
-          readLabelValues();
+    const fbsText=
+      label.fbs
+        ?`${label.fbs}% FBS`
+        :"FBS concentration";
 
-        const errors=[];
+    const penStrepText=
+      label.penStrep
+        ?`${label.penStrep}% Pen/Strep`
+        :"Pen/Strep concentration";
 
+    const dateText=
+      normalizeDate(
+        label.preparationDate
+      );
 
-        /******************************************************************
-         * Medium name
-         ******************************************************************/
+    preview.innerHTML=`
+      <div class="boss20-real-bottle">
 
-        const mediumNameValid=
-          values.mediumName
-            .trim()
-            .toLowerCase()===
-          correctLabel.mediumName
-            .toLowerCase();
+        <div class="boss20-bottle-cap"></div>
+        <div class="boss20-bottle-neck"></div>
 
-        markField(
-          "#boss20LabelMediumName",
-          mediumNameValid
-        );
+        <div class="boss20-bottle-body">
 
-        if(!mediumNameValid){
-          errors.push(
-            `培養基名稱應為「${correctLabel.mediumName}」。`
-          );
-        }
+          <div
+            class="boss20-bottle-liquid"
+            style="height:0%;"
+          ></div>
 
+          <div class="boss20-bottle-label">
 
-        /******************************************************************
-         * Total volume
-         *
-         * 接受：
-         * 500 mL
-         * 500ml
-         * 500 ML
-         ******************************************************************/
-
-        const enteredVolumeMatch=
-          values.totalVolume.match(
-            /^(\d+(?:\.\d+)?)\s*ml$/i
-          );
-
-        const enteredVolume=
-          enteredVolumeMatch
-            ?Number(
-                enteredVolumeMatch[1]
-              )
-            :NaN;
-
-        const totalVolumeValid=
-          Number.isFinite(
-            enteredVolume
-          )&&
-          this.approximatelyEqual(
-            enteredVolume,
-            state.totalVolume,
-            .1
-          );
-
-        markField(
-          "#boss20LabelTotalVolume",
-          totalVolumeValid
-        );
-
-        if(!totalVolumeValid){
-
-          errors.push(
-            `總體積應標示為 ${correctLabel.totalVolume}。`
-          );
-        }
-
-
-        /******************************************************************
-         * FBS
-         ******************************************************************/
-
-        const normalizedFbs=
-          values.fbs
-            .replaceAll(
-              " ",
-              ""
-            )
-            .toLowerCase();
-
-        const fbsValid=
-          normalizedFbs==="10%fbs";
-
-        markField(
-          "#boss20LabelFbs",
-          fbsValid
-        );
-
-        if(!fbsValid){
-
-          errors.push(
-            "FBS 濃度應標示為 10% FBS。"
-          );
-        }
-
-
-        /******************************************************************
-         * Pen/Strep
-         ******************************************************************/
-
-        const normalizedPenStrep=
-          values.penStrep
-            .replaceAll(
-              " ",
-              ""
-            )
-            .toLowerCase();
-
-        const penStrepValid=
-          [
-            "1%pen/strep",
-            "1%penstrep",
-            "1%p/s"
-          ].includes(
-            normalizedPenStrep
-          );
-
-        markField(
-          "#boss20LabelPenStrep",
-          penStrepValid
-        );
-
-        if(!penStrepValid){
-          errors.push(
-            "Pen/Strep 濃度應標示為 1% Pen/Strep。"
-          );
-        }
-
-
-        /******************************************************************
-         * Preparation date
-         ******************************************************************/
-
-        const normalizedPreparationDate=
-          normalizeDate(
-            values.preparationDate
-          );
-
-        const preparationDateValid=
-          normalizedPreparationDate!=="";
-
-        markField(
-          "#boss20LabelDate",
-          preparationDateValid
-        );
-
-        if(!preparationDateValid){
-          errors.push(
-            "必須填寫有效的製備日期。"
-          );
-        }
-
-
-        /******************************************************************
-         * Operator initials
-         *
-         * 允許 2–6 個英文字母。
-         ******************************************************************/
-
-        const initialsValid=
-          /^[A-Za-z]{2,6}$/.test(
-            values.operatorInitials
-          );
-
-        markField(
-          "#boss20LabelInitials",
-          initialsValid
-        );
-
-        if(!initialsValid){
-
-          errors.push(
-            "操作者縮寫必須為 2–6 個英文字母。"
-          );
-        }
-
-
-        /******************************************************************
-         * Storage
-         *
-         * 接受：
-         * 4°C
-         * 4 °C
-         * 4C
-         ******************************************************************/
-
-        const normalizedStorage=
-          values.storage
-            .replaceAll(
-              " ",
-              ""
-            )
-            .replaceAll(
-              "°",
-              ""
-            )
-            .toUpperCase();
-
-        const storageValid=
-          normalizedStorage==="4C";
-
-        markField(
-          "#boss20LabelStorage",
-          storageValid
-        );
-
-        if(!storageValid){
-
-          errors.push(
-            "保存條件應標示為 4°C。"
-          );
-        }
-
-
-        /******************************************************************
-         * 標籤錯誤：立即結束 Boss 任務
-         ******************************************************************/
-
-        if(errors.length>0){
-
-          labeling.passed=false;
-
-          this.failMission(
-            ctx,
-            [
-              ...errors,
-              "Complete DMEM 標籤資料不正確，可能造成樣本誤認或錯誤保存。"
-            ],
-            {
-              penalties:[
-                {
-                  metric:"accuracy",
-                  amount:100,
-                  message:
-                    "Complete DMEM 標籤內容錯誤。"
-                },
-                {
-                  metric:"sampleQuality",
-                  amount:100,
-                  message:"錯誤標籤可能造成培養基誤用或保存條件錯誤。"
-                },
-                {
-                  metric:"safety",
-                  amount:100,
-                  message:
-                    "實驗材料標示不完整可能造成操作與生物安全風險。"
-                }
-              ]
-            }
-          );
-
-          return;
-        }
-
-
-        /******************************************************************
-         * Round 4 成功
-         ******************************************************************/
-
-        locked=true;
-
-        labeling.passed=true;
-        label.mediumName=
-          correctLabel.mediumName;
-        label.totalVolume=
-          correctLabel.totalVolume;
-        label.fbs=
-          correctLabel.fbs;
-        label.penStrep=
-          correctLabel.penStrep;
-        label.preparationDate=
-          normalizedPreparationDate;
-        label.operatorInitials=
-          values.operatorInitials
-            .toUpperCase();
-        label.storage=
-          correctLabel.storage;
-        labeling.selectedItems=[
-          "mediumName",
-          "totalVolume",
-          "fbs",
-          "penStrep",
-          "preparationDate",
-          "operatorInitials",
-          "storage"
-        ];
-
-        confirmButton.disabled=true;
-
-        ctx.stage
-          .querySelectorAll(
-            "button,input"
-          )
-          .forEach(
-            control=>{
-              control.disabled=true;
-            }
-          );
-
-        updatePreview();
-
-        setMessage(
-          `
-            <strong>Complete DMEM 標籤完成</strong>
+            <strong>
+              ${this.escapeHtml(
+                mediumText
+              )}
+            </strong>
 
             <span>
-              ${this.escapeHtml(label.mediumName)} ／
               ${this.escapeHtml(
-                label.totalVolume
-              )} ／
-              ${this.escapeHtml(
-                label.fbs
-              )} ／
-              ${this.escapeHtml(
-                label.penStrep
-              )} ／
-              ${this.escapeHtml(
-                label.preparationDate
-              )} ／
-              ${this.escapeHtml(
-                label.operatorInitials
-              )} ／
-              ${this.escapeHtml(
-                label.storage
+                volumeText
               )}
             </span>
-          `,
-          "success"
+
+            <span>
+              ${this.escapeHtml(
+                fbsText
+              )}
+            </span>
+
+            <span>
+              ${this.escapeHtml(
+                penStrepText
+              )}
+            </span>
+
+            ${
+              dateText
+                ?`
+                  <span>
+                    Date：
+                    ${this.escapeHtml(
+                      dateText
+                    )}
+                  </span>
+                `
+                :""
+            }
+
+          </div>
+
+        </div>
+      </div>
+    `;
+  };
+
+  ctx.stage.innerHTML=
+    this.game.shell(
+      "Label Complete DMEM",
+
+      `
+        為處理完成的 Complete DMEM 製作標籤。
+        Volume、FBS 與 Pen/Strep 的單位已經內建，
+        玩家只需輸入數值。
+      `,
+
+      `
+        <div class="boss20-round boss20-round4">
+
+          <section class="boss20-label-summary">
+
+            <div class="boss20-label-requirement">
+
+              <span class="kicker">
+                LABEL REQUIREMENTS
+              </span>
+
+              <strong>Complete DMEM Bottle</strong>
+
+              <ul>
+                <li>培養基名稱</li>
+                <li>總體積</li>
+                <li>FBS 濃度</li>
+                <li>Pen/Strep 濃度</li>
+                <li>製備日期</li>
+              </ul>
+
+            </div>
+
+            <div class="boss20-label-warning">
+
+              <span class="kicker">
+                IMPORTANT
+              </span>
+
+              <strong>確認後無法修改</strong>
+
+              <p>
+                標籤資料錯誤將造成 Boss 任務立即失敗。
+              </p>
+
+            </div>
+
+          </section>
+
+          <div class="boss20-label-layout">
+
+            <section class="boss20-label-form-panel">
+
+              <div class="boss20-section-heading">
+
+                <div>
+
+                  <span class="kicker">
+                    LABEL INFORMATION
+                  </span>
+
+                  <strong>輸入標籤內容</strong>
+
+                </div>
+
+                <small>所有欄位皆為必填</small>
+
+              </div>
+
+              <div class="boss20-label-form">
+
+                <label class="boss20-label-field">
+
+                  <span>Medium name</span>
+
+                  <input
+                    type="text"
+                    id="boss20LabelMediumName"
+                    value="${this.escapeHtml(
+                      label.mediumName||""
+                    )}"
+                    placeholder="Complete DMEM"
+                    autocomplete="off"
+                  >
+
+                </label>
+
+                <label class="boss20-label-field">
+
+                  <span>Total volume</span>
+
+                  <div class="boss20-number-input">
+
+                    <input
+                      type="number"
+                      id="boss20LabelTotalVolume"
+                      min="0"
+                      step="0.1"
+                      value="${this.escapeHtml(
+                        label.totalVolume||""
+                      )}"
+                      placeholder="輸入數值"
+                    >
+
+                    <span>mL</span>
+
+                  </div>
+
+                </label>
+
+                <label class="boss20-label-field">
+
+                  <span>Supplement — FBS</span>
+
+                  <div class="boss20-number-input">
+
+                    <input
+                      type="number"
+                      id="boss20LabelFbs"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value="${this.escapeHtml(
+                        label.fbs||""
+                      )}"
+                      placeholder="輸入數值"
+                    >
+
+                    <span>% FBS</span>
+
+                  </div>
+
+                </label>
+
+                <label class="boss20-label-field">
+
+                  <span>Supplement — Pen/Strep</span>
+
+                  <div class="boss20-number-input">
+
+                    <input
+                      type="number"
+                      id="boss20LabelPenStrep"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value="${this.escapeHtml(
+                        label.penStrep||""
+                      )}"
+                      placeholder="輸入數值"
+                    >
+
+                    <span>% Pen/Strep</span>
+
+                  </div>
+
+                </label>
+
+                <label class="boss20-label-field">
+
+                  <span>Preparation date</span>
+
+                  <input
+                    type="date"
+                    id="boss20LabelDate"
+                    value="${this.escapeHtml(
+                      label.preparationDate||""
+                    )}"
+                  >
+
+                </label>
+
+              </div>
+
+            </section>
+
+            <section class="boss20-label-preview-panel">
+
+              <div class="boss20-section-heading">
+
+                <div>
+
+                  <span class="kicker">
+                    LIVE PREVIEW
+                  </span>
+
+                  <strong>Bottle Label Preview</strong>
+
+                </div>
+
+                <small>輸入時即時更新</small>
+
+              </div>
+
+              <div
+                id="boss20LabelPreview"
+                class="boss20-label-preview"
+              ></div>
+
+            </section>
+
+          </div>
+
+          <div
+            id="boss20LabelMessage"
+            class="notice"
+            aria-live="polite"
+          >
+            請依照本次 Complete DMEM 配方填寫完整標籤。
+          </div>
+
+          <div class="controls">
+
+            <button
+              type="button"
+              id="boss20ConfirmLabel"
+              class="btn btn-primary btn-large"
+            >
+              貼上標籤並確認
+            </button>
+
+          </div>
+
+        </div>
+      `
+    );
+
+  updatePreview();
+
+  ctx.stage
+    .querySelectorAll(
+      ".boss20-label-form input"
+    )
+    .forEach(
+      input=>{
+
+        input.addEventListener(
+          "input",
+          ()=>{
+
+            if(
+              locked||
+              this.missionFailed
+            ){
+              return;
+            }
+
+            input.classList.remove(
+              "boss20-field-valid",
+              "boss20-field-invalid"
+            );
+
+            updatePreview();
+          }
         );
 
-        this.completeRound(
-          ctx,
-          900
+        input.addEventListener(
+          "change",
+          updatePreview
         );
       }
     );
-  },
+
+  const confirmButton=
+    ctx.stage.querySelector(
+      "#boss20ConfirmLabel"
+    );
+
+  confirmButton.addEventListener(
+    "click",
+    ()=>{
+
+      if(
+        locked||
+        this.missionFailed
+      ){
+        return;
+      }
+
+      clearFieldMarks();
+      saveLabelValues();
+
+      const values=
+        readLabelValues();
+
+      const errors=[];
+
+      const mediumNameValid=
+        values.mediumName
+          .toLowerCase()===
+        correctLabel.mediumName
+          .toLowerCase();
+
+      markField(
+        "#boss20LabelMediumName",
+        mediumNameValid
+      );
+
+      if(!mediumNameValid){
+
+        errors.push(
+          "培養基名稱應為 Complete DMEM。"
+        );
+      }
+
+      const enteredVolume=
+        Number(
+          values.totalVolume
+        );
+
+      const totalVolumeValid=
+        values.totalVolume!==""&&
+        Number.isFinite(
+          enteredVolume
+        )&&
+        this.approximatelyEqual(
+          enteredVolume,
+          state.totalVolume,
+          .1
+        );
+
+      markField(
+        "#boss20LabelTotalVolume",
+        totalVolumeValid
+      );
+
+      if(!totalVolumeValid){
+
+        errors.push(
+          `總體積應為 ${this.displayNumber(
+            state.totalVolume
+          )} mL。`
+        );
+      }
+
+      const enteredFbs=
+        Number(
+          values.fbs
+        );
+
+      const fbsValid=
+        values.fbs!==""&&
+        this.approximatelyEqual(
+          enteredFbs,
+          10,
+          .1
+        );
+
+      markField(
+        "#boss20LabelFbs",
+        fbsValid
+      );
+
+      if(!fbsValid){
+
+        errors.push(
+          "FBS 濃度應為 10%。"
+        );
+      }
+
+      const enteredPenStrep=
+        Number(
+          values.penStrep
+        );
+
+      const penStrepValid=
+        values.penStrep!==""&&
+        this.approximatelyEqual(
+          enteredPenStrep,
+          1,
+          .1
+        );
+
+      markField(
+        "#boss20LabelPenStrep",
+        penStrepValid
+      );
+
+      if(!penStrepValid){
+
+        errors.push(
+          "Pen/Strep 濃度應為 1%。"
+        );
+      }
+
+      const normalizedPreparationDate=
+        normalizeDate(
+          values.preparationDate
+        );
+
+      const preparationDateValid=
+        normalizedPreparationDate!=="";
+
+      markField(
+        "#boss20LabelDate",
+        preparationDateValid
+      );
+
+      if(!preparationDateValid){
+
+        errors.push(
+          "必須填寫有效的製備日期。"
+        );
+      }
+
+      if(errors.length>0){
+
+        labeling.passed=false;
+
+        this.failMission(
+          ctx,
+          [
+            ...errors,
+            "Complete DMEM 標籤資料不正確。"
+          ],
+          {
+            penalties:[
+              {
+                metric:"accuracy",
+                amount:100,
+                message:
+                  "Complete DMEM 標籤內容錯誤。"
+              },
+              {
+                metric:"sampleQuality",
+                amount:100,
+                message:
+                  "錯誤標籤可能造成培養基誤用。"
+              }
+            ]
+          }
+        );
+
+        return;
+      }
+
+      locked=true;
+      labeling.passed=true;
+
+      label.mediumName=
+        correctLabel.mediumName;
+
+      label.totalVolume=
+        correctLabel.totalVolume;
+
+      label.fbs=
+        correctLabel.fbs;
+
+      label.penStrep=
+        correctLabel.penStrep;
+
+      label.preparationDate=
+        normalizedPreparationDate;
+
+      labeling.selectedItems=[
+        "mediumName",
+        "totalVolume",
+        "fbs",
+        "penStrep",
+        "preparationDate"
+      ];
+
+      confirmButton.disabled=true;
+
+      ctx.stage
+        .querySelectorAll(
+          "button,input"
+        )
+        .forEach(
+          control=>{
+            control.disabled=true;
+          }
+        );
+
+      updatePreview();
+
+      setMessage(
+        `
+          <strong>Complete DMEM 標籤完成</strong>
+
+          <span>
+            ${this.escapeHtml(
+              label.mediumName
+            )} ／
+            ${this.escapeHtml(
+              label.totalVolume
+            )} mL ／
+            ${this.escapeHtml(
+              label.fbs
+            )}% FBS ／
+            ${this.escapeHtml(
+              label.penStrep
+            )}% Pen/Strep ／
+            ${this.escapeHtml(
+              label.preparationDate
+            )}
+          </span>
+        `,
+        "success"
+      );
+
+      this.completeRound(
+        ctx,
+        900
+      );
+    }
+  );
+},
   
 
   /**************************************************************************
@@ -6547,23 +6396,14 @@ if(
         correct:true
       },
       {
-        id:"label",
-        category:"LABEL",
-        icon:"🏷️",
-        title:"培養基標籤資訊完整",
-        description:
-          "標籤包含名稱、總體積、FBS、Pen/Strep、日期、操作者與保存條件。",
-        correct:true
-      },
-      {
-        id:"storage",
-        category:"STORAGE",
-        icon:"❄️",
-        title:"保存條件標示為 4°C",
-        description:
-          "Complete DMEM 已標示正確冷藏條件。",
-        correct:true
-      },
+  id:"label",
+  category:"LABEL",
+  icon:"🏷️",
+  title:"培養基標籤資訊完整",
+  description:
+    "標籤包含名稱、總體積、FBS、Pen/Strep 與製備日期。",
+  correct:true
+},
       {
         id:"pbs-added",
         category:"FORMULA",
@@ -7079,15 +6919,7 @@ if(
                   </strong>
                 </div>
 
-                <div>
-                  <small>Storage</small>
-                  <strong>
-                    ${this.escapeHtml(
-                      label.storage||
-                      "—"
-                    )}
-                  </strong>
-                </div>
+               
 
               </div>
             </section>
@@ -7160,25 +6992,7 @@ if(
                     </strong>
                   </div>
 
-                  <div>
-                    <small>Operator</small>
-                    <strong>
-                      ${this.escapeHtml(
-                        label.operatorInitials||
-                        "—"
-                      )}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <small>Storage</small>
-                    <strong>
-                      ${this.escapeHtml(
-                        label.storage||
-                        "—"
-                      )}
-                    </strong>
-                  </div>
+                  
 
                 </div>
               </section>
@@ -7377,22 +7191,34 @@ if(
           );
         }
 
-        if(
-          !this.approximatelyEqual(
-            transferredTotal,
-            state.totalVolume,
-            .1
-          )
-        ){
+        const requiredTransferTotal=
+  this.roundOneDecimal(
+    tubes.reduce(
+      (sum,tube)=>
+        sum+
+        Number(
+          tube.volume||0
+        ),
+      0
+    )
+  );
 
-          internalErrors.push(
-            `離心管分裝總量為 ${this.displayNumber(
-              transferredTotal
-            )} mL，應為 ${this.displayNumber(
-              state.totalVolume
-            )} mL。`
-          );
-        }
+if(
+  !this.approximatelyEqual(
+    transferredTotal,
+    requiredTransferTotal,
+    .1
+  )
+){
+
+  internalErrors.push(
+    `離心管分裝總量為 ${this.displayNumber(
+      transferredTotal
+    )} mL，指定分裝總量應為 ${this.displayNumber(
+      requiredTransferTotal
+    )} mL。`
+  );
+}
 
         const incompleteTubes=
           tubes.filter(
