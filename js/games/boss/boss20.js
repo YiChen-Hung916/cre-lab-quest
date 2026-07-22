@@ -202,8 +202,14 @@ const Boss20={
        * Round 5 暫時保留。
        */
       inspection:{
-        postponed:true,
-        passed:false
+
+    found:new Set(),
+
+    mistakes:[],
+
+    passed:false
+
+}
       },
 
       currentRound:1,
@@ -6308,1226 +6314,182 @@ if(
    * Final Inspection
    **************************************************************************/
 
-  round5(ctx){
-
-    const state=
-      this.state;
-
-    state.currentRound=5;
-
-
-    /**********************************************************************
-     * Round 4 未完成時，不允許進入 Final Inspection
-     **********************************************************************/
-
-    if(
-      !state.labeling||
-      !state.labeling.passed
-    ){
-
-      this.failMission(
-        ctx,
-        [
-          "Round 4 的 Complete DMEM 標籤尚未正確完成。",
-          "無法進行最終品質檢查。"
-        ],
-        {
-          penalties:[]
-        }
-      );
-
-      return;
-    }
-
-
-    /**********************************************************************
-     * 建立／延續 Inspection 狀態
-     **********************************************************************/
-
-    if(!state.inspection){
-
-      state.inspection={
-        postponed:false,
-        selectedItems:[],
-        passed:false
-      };
-    }
-
-    state.inspection.postponed=false;
-
-    if(
-      !Array.isArray(
-        state.inspection.selectedItems
-      )
-    ){
-
-      state.inspection.selectedItems=[];
-    }
-
-    const inspection=
-      state.inspection;
-
-    const tubes=
-      Array.isArray(
-        state.transfer?.tubes
-      )
-        ?[...state.transfer.tubes]
-            .sort(
-              (first,second)=>
-                first.id-second.id
-            )
-        :[];
-
-    const label=
-      state.bottle?.label||{};
-
-    let locked=false;
-
-
-    /**********************************************************************
-     * Inspection 項目
-     *
-     * correct:true  = 應該勾選
-     * correct:false = 錯誤描述／異常判斷
-     **********************************************************************/
-
-    const inspectionItems=[
-      {
-        id:"formula",
-        category:"FORMULA",
-        icon:"🧪",
-        title:"Complete DMEM 配方正確",
-        description:
-          `DMEM 89%、FBS 10%、Pen/Strep 1%，總體積 ${this.displayNumber(
-            state.totalVolume
-          )} mL。`,
-        correct:true
-      },
-      {
-        id:"aliquot",
-        category:"ALIQUOT",
-        icon:"💧",
-        title:"所有離心管分裝量正確",
-        description:
-          `${tubes.length} 支 Tube 均已依指定容量完成分裝。`,
-        correct:true
-      },
-      {
-        id:"balance",
-        category:"CENTRIFUGE",
-        icon:"⚙️",
-        title:"離心管已正確配平",
-        description:
-          `所有 Tube 均有相同體積的對向 Tube，並完成 ${state.centrifuge?.rpm||"—"} RPM、${state.centrifuge?.time||"—"} 分鐘離心。`,
-        correct:true
-      },
-      {
-  id:"label",
-  category:"LABEL",
-  icon:"🏷️",
-  title:"培養基標籤資訊完整",
-  description:
-    "標籤包含名稱、總體積、FBS、Pen/Strep 與製備日期。",
-  correct:true
-},
-      {
-        id:"pbs-added",
-        category:"FORMULA",
-        icon:"⚠️",
-        title:"配方中已加入 PBS",
-        description:
-          "PBS 是 Complete DMEM 的必要成分。",
-        correct:false
-      },
-      {
-        id:"room-temperature",
-        category:"STORAGE",
-        icon:"⚠️",
-        title:"可於室溫長期保存",
-        description:
-          "Complete DMEM 完成後不需要冷藏。",
-        correct:false
-      },
-      {
-        id:"unbalanced",
-        category:"CENTRIFUGE",
-        icon:"⚠️",
-        title:"離心機不需配平",
-        description:
-          "只要 RPM 正確，Tube 位置不會影響離心安全。",
-        correct:false
-      }
-    ];
-
-    const requiredItemIds=
-      inspectionItems
-        .filter(
-          item=>item.correct
-        )
-        .map(
-          item=>item.id
-        );
-
-    const wrongItemIds=
-      inspectionItems
-        .filter(
-          item=>!item.correct
-        )
-        .map(
-          item=>item.id
-        );
-
-    const selectedItems=
-      new Set(
-        inspection.selectedItems
-      );
-
-
-    /**********************************************************************
-     * 計算分裝總量
-     **********************************************************************/
-
-    const transferredTotal=
-      this.roundOneDecimal(
-        tubes.reduce(
-          (sum,tube)=>
-            sum+
-            (
-              Number(
-                tube.transferredVolume
-              )||0
-            ),
-          0
-        )
-      );
-
-    /**********************************************************************
-     * 取得已離心 Tube 數量
-     *
-     * Round 3 是以整批 centrifuge.passed 判斷完成，
-     * 因此不依賴個別 tube.centrifuged 欄位。
-     **********************************************************************/
-
-    const processedTubeCount=
-      state.centrifuge?.passed
-        ?tubes.length
-        :0;
-
-
-    /**********************************************************************
-     * 顯示訊息
-     **********************************************************************/
-
-    const setMessage=(
-      message,
-      type=""
-    )=>{
-
-      const box=
-        ctx.stage.querySelector(
-          "#boss20InspectionMessage"
-        );
-
-      if(!box){
-        return;
-      }
-
-      box.classList.remove(
-        "success",
-        "warning",
-        "error"
-      );
-
-      if(type){
-        box.classList.add(type);
-      }
-
-      box.innerHTML=
-        message;
-    };
-
-
-    /**********************************************************************
-     * 更新選擇進度
-     **********************************************************************/
-
-    const updateProgress=()=>{
-
-      const selectedCorrectCount=
-        requiredItemIds.filter(
-          id=>selectedItems.has(id)
-        ).length;
-
-      const progressText=
-        ctx.stage.querySelector(
-          "#boss20InspectionProgress"
-        );
-
-      if(progressText){
-        progressText.textContent=
-          `${selectedCorrectCount} / ${requiredItemIds.length}`;
-      }
-
-      const progressBar=
-        ctx.stage.querySelector(
-          "#boss20InspectionProgressBar"
-        );
-
-      if(progressBar){
-        progressBar.style.width=
-          `${
-            requiredItemIds.length===0
-              ?0
-              :selectedCorrectCount/
-                requiredItemIds.length*
-                100
-          }%`;
-      }
-
-      inspection.selectedItems=
-        [...selectedItems];
-    };
-
-
-    /**********************************************************************
-     * 更新 Inspection Card 樣式
-     **********************************************************************/
-
-    const updateInspectionCards=()=>{
-
-      ctx.stage
-        .querySelectorAll(
-          "[data-boss20-inspection-item]"
-        )
-        .forEach(
-          button=>{
-
-            const itemId=
-              button.dataset
-                .boss20InspectionItem;
-
-            const selected=
-              selectedItems.has(
-                itemId
-              );
-
-            button.classList.toggle(
-              "selected",
-              selected
-            );
-
-            button.setAttribute(
-              "aria-pressed",
-              selected
-                ?"true"
-                :"false"
-            );
-          }
-        );
-    };
-
-
-    /**********************************************************************
-     * 更新全部畫面
-     **********************************************************************/
-
-    const updateAll=()=>{
-
-      updateInspectionCards();
-      updateProgress();
-    };
-
-
-    /**********************************************************************
-     * 建立 Tube Summary
-     **********************************************************************/
-
-    const tubeSummaryHtml=
-      tubes
-        .map(
-          tube=>`
-            <div class="boss20-inspection-tube">
-
-              <span class="boss20-inspection-tube-icon">
-
-                <span class="boss20-tube-cap"></span>
-
-                <span class="boss20-tube-body">
-
-                  <span
-                    class="boss20-tube-liquid"
-                    style="
-                      height:${
-                        Math.max(
-                          12,
-                          Math.min(
-                            82,
-                            (
-                              Number(
-                                tube.transferredVolume
-                              )||0
-                            )/
-                            50*
-                            82
-                          )
-                        )
-                      }%;
-                    "
-                  ></span>
-
-                </span>
-
-              </span>
-
-              <strong>
-                Tube ${tube.id}
-              </strong>
-
-              <small>
-                Target：
-                ${this.displayNumber(
-                  tube.volume
-                )} mL
-              </small>
-
-              <small>
-                Actual：
-                ${this.displayNumber(
-                  tube.transferredVolume
-                )} mL
-              </small>
-
-              <span
-                class="
-                  boss20-inspection-status
-                  ${
-                    tube.filled
-                      ?"success"
-                      :"error"
-                  }
-                "
-              >
-                ${
-                  tube.filled
-                    ?"Filled"
-                    :"Incomplete"
-                }
-              </span>
-
-            </div>
-          `
-        )
-        .join("");
-
-
-    /**********************************************************************
-     * 建立 Inspection Checklist
-     **********************************************************************/
-
-    const checklistHtml=
-      inspectionItems
-        .map(
-          item=>`
-            <button
-              type="button"
-              class="
-                boss20-inspection-item
-                ${
-                  selectedItems.has(
-                    item.id
-                  )
-                    ?"selected"
-                    :""
-                }
-              "
-              data-boss20-inspection-item="${item.id}"
-              aria-pressed="${
-                selectedItems.has(
-                  item.id
-                )
-                  ?"true"
-                  :"false"
-              }"
-            >
-
-              <span
-                class="boss20-inspection-checkbox"
-                aria-hidden="true"
-              >
-                ✓
-              </span>
-
-              <span class="boss20-inspection-item-icon">
-                ${item.icon}
-              </span>
-
-              <span class="boss20-inspection-item-content">
-
-                <small>
-                  ${item.category}
-                </small>
-
-                <strong>
-                  ${this.escapeHtml(
-                    item.title
-                  )}
-                </strong>
-
-                <span>
-                  ${this.escapeHtml(
-                    item.description
-                  )}
-                </span>
-
-              </span>
-
-            </button>
-          `
-        )
-        .join("");
-
-
-    /**********************************************************************
-     * Round 5 主畫面
-     **********************************************************************/
-
-    ctx.stage.innerHTML=
-      this.game.shell(
-        "Final Inspection",
-
-        `
-          完成送出前的最終品質檢查。
-          請勾選所有符合本次實驗結果的正確敘述，
-          不要勾選錯誤或不安全的敘述。
-        `,
-
-        `
-          <div class="boss20-round boss20-round5">
-
-            <section class="boss20-inspection-header">
-
-              <div class="boss20-inspection-progress-card">
-
-                <span class="kicker">
-                  INSPECTION PROGRESS
-                </span>
-
-                <strong id="boss20InspectionProgress">
-                  ${
-                    requiredItemIds.filter(
-                      id=>selectedItems.has(id)
-                    ).length
-                  }
-                  /
-                  ${requiredItemIds.length}
-                </strong>
-
-                <div class="boss20-progress-track">
-
-                  <div
-                    id="boss20InspectionProgressBar"
-                    class="boss20-progress-fill"
-                    style="
-                      width:${
-                        requiredItemIds.length===0
-                          ?0
-                          :requiredItemIds.filter(
-                              id=>selectedItems.has(id)
-                            ).length/
-                            requiredItemIds.length*
-                            100
-                      }%;
-                    "
-                  ></div>
-
-                </div>
-
-              </div>
-
-
-              <div class="boss20-inspection-instruction">
-
-                <span class="kicker">
-                  QUALITY CONTROL
-                </span>
-
-                <strong>Select all correct observations</strong>
-                <span>
-                  選錯項目或遺漏必要項目，
-                  將判定 Final Inspection 失敗。
-                </span>
-
-              </div>
-
-            </section>
-
-
-            <section class="boss20-batch-summary">
-
-              <div class="boss20-section-heading">
-
-                <div>
-
-                  <span class="kicker">
-                    BATCH RECORD
-                  </span>
-
-                  <strong>Complete DMEM 製備紀錄</strong>
-
-                </div>
-                <small>Boss Level 20</small>
-
-              </div>
-
-
-              <div class="boss20-batch-summary-grid">
-
-                <div>
-                  <small>Final volume</small>
-                  <strong>
-                    ${this.displayNumber(
-                      state.totalVolume
-                    )} mL
-                  </strong>
-                </div>
-
-                <div>
-                  <small>DMEM</small>
-                  <strong>
-                    ${this.displayNumber(
-                      state.formula?.DMEM
-                    )} mL
-                  </strong>
-                </div>
-
-                <div>
-                  <small>FBS</small>
-                  <strong>
-                    ${this.displayNumber(
-                      state.formula?.FBS
-                    )} mL
-                  </strong>
-                </div>
-
-                <div>
-                  <small>Pen/Strep</small>
-                  <strong>
-                    ${this.displayNumber(
-                      state.formula?.[
-                        "Pen/Strep"
-                      ]
-                    )} mL
-                  </strong>
-                </div>
-
-                <div>
-                  <small>Tubes</small>
-                  <strong>
-                    ${tubes.length}
-                  </strong>
-                </div>
-
-                <div>
-                  <small>Aliquoted</small>
-                  <strong>
-                    ${this.displayNumber(
-                      transferredTotal
-                    )} mL
-                  </strong>
-                </div>
-
-                <div>
-                  <small>Centrifuged</small>
-                  <strong>
-                    ${processedTubeCount}
-                    /
-                    ${tubes.length}
-                  </strong>
-                </div>
-
-               
-
-              </div>
-            </section>
-
-
-            <div class="boss20-final-review-layout">
-              <section class="boss20-final-label-panel">
-                <div class="boss20-section-heading">
-                  <div>
-                    <span class="kicker">
-                      FINAL LABEL
-                    </span>
-                    <strong>Complete DMEM Label</strong>
-                  </div>
-                  <small>Round 4 result</small>
-                </div>
-
-
-                <div class="boss20-final-bottle">
-                  ${this.bottleHtml({
-                    currentVolume:0,
-                    showLabel:true,
-                    label
-                  })}
-                </div>
-
-                <div class="boss20-final-label-record">
-                  <div>
-                    <small>Medium</small>
-                    <strong>
-                      ${this.escapeHtml(
-                        label.mediumName||
-                        "—"
-                      )}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <small>Volume</small>
-                    <strong>
-                      ${this.escapeHtml(
-                        label.totalVolume||
-                        "—"
-                      )}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <small>Supplements</small>
-                    <strong>
-                      ${this.escapeHtml(
-                        label.fbs||
-                        "—"
-                      )}
-                      ／
-                      ${this.escapeHtml(
-                        label.penStrep||
-                        "—"
-                      )}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <small>Preparation date</small>
-                    <strong>
-                      ${this.escapeHtml(
-                        label.preparationDate||
-                        "—"
-                      )}
-                    </strong>
-                  </div>
-
-                  
-
-                </div>
-              </section>
-
-              <section class="boss20-final-tube-panel">
-                <div class="boss20-section-heading">
-                  <div>
-                    <span class="kicker">
-                      TUBE RECORD
-                    </span>
-                    <strong>Aliquot Inspection</strong>
-                  </div>
-
-                  <small>
-                    ${tubes.length} tubes
-                  </small>
-
-                </div>
-
-                <div class="boss20-inspection-tube-grid">
-                  ${tubeSummaryHtml}
-                </div>
-
-              </section>
-            </div>
-
-            <section class="boss20-inspection-checklist">
-              <div class="boss20-section-heading">
-                <div>
-                  <span class="kicker">
-                    FINAL CHECKLIST
-                  </span>
-                  <strong>選擇所有正確敘述</strong>
-                </div>
-                <small>部分項目為錯誤敘述</small>
-              </div>
-
-              <div class="boss20-inspection-item-grid">
-                ${checklistHtml}
-              </div>
-            </section>
-
-            <div
-              id="boss20InspectionMessage"
-              class="notice"
-              aria-live="polite"
-            >
-              請檢查製備、分裝、離心與標籤紀錄，
-              再選擇所有正確敘述。
-            </div>
-
-            <div class="controls">
-
-              <button
-                type="button"
-                id="boss20ConfirmInspection"
-                class="btn btn-primary btn-large"
-              >
-                完成 Final Inspection
-              </button>
-            </div>
-          </div>
-        `
-      );
-
-
-    /**********************************************************************
-     * 初始化畫面
-     **********************************************************************/
-
-    updateAll();
-
-    /**********************************************************************
-     * Inspection 項目點擊
-     **********************************************************************/
-
-    ctx.stage
-      .querySelectorAll(
-        "[data-boss20-inspection-item]"
-      )
-      .forEach(
-        button=>{
-          button.addEventListener(
-            "click",
-            ()=>{
-
-              if(
-                locked||
-                this.missionFailed
-              ){
-                return;
-              }
-
-              const itemId=
-                button.dataset
-                  .boss20InspectionItem;
-
-              if(selectedItems.has(itemId)){
-
-                selectedItems.delete(
-                  itemId
-                );
-
-              }else{
-
-                selectedItems.add(
-                  itemId
-                );
-              }
-
-              updateAll();
-
-              const selectedCount=
-                selectedItems.size;
-
-              setMessage(
-                `
-                  <strong>
-                    已選擇 ${selectedCount} 個檢查項目
-                  </strong>
-
-                  <span>
-                    確認所有正確敘述皆已勾選，
-                    並移除任何錯誤敘述。
-                  </span>
-                `,
-                selectedCount>0
-                  ?"success"
-                  :"warning"
-              );
-            }
-          );
-        }
-      );
-
-
-    /**********************************************************************
-     * 確認 Final Inspection
-     **********************************************************************/
-
-    const confirmButton=
-      ctx.stage.querySelector(
-        "#boss20ConfirmInspection"
-      );
-
-    confirmButton.addEventListener(
-      "click",
-      ()=>{
-
-        if(
-          locked||
-          this.missionFailed
-        ){
-          return;
-        }
-
-        inspection.selectedItems=
-          [...selectedItems];
-
-        const missingRequiredItems=
-          requiredItemIds.filter(
-            id=>!selectedItems.has(id)
-          );
-
-        const selectedWrongItems=
-          wrongItemIds.filter(
-            id=>selectedItems.has(id)
-          );
-
-        const internalErrors=[];
-
-
-        /******************************************************************
-         * 再次驗證 Round 1
-         ******************************************************************/
-
-        if(
-          !state.preparation?.passed||
-          !state.bottle?.prepared
-        ){
-
-          internalErrors.push(
-            "Complete DMEM 配製紀錄不完整。"
-          );
-        }
-
-
-        /******************************************************************
-         * 再次驗證 Round 2
-         ******************************************************************/
-
-        if(!state.transfer?.passed){
-
-          internalErrors.push(
-            "Complete DMEM 分裝紀錄不完整。"
-          );
-        }
-
-        const requiredTransferTotal=
-  this.roundOneDecimal(
-    tubes.reduce(
-      (sum,tube)=>
-        sum+
-        Number(
-          tube.volume||0
-        ),
-      0
-    )
-  );
-
-if(
-  !this.approximatelyEqual(
-    transferredTotal,
-    requiredTransferTotal,
-    .1
-  )
-){
-
-  internalErrors.push(
-    `離心管分裝總量為 ${this.displayNumber(
-      transferredTotal
-    )} mL，指定分裝總量應為 ${this.displayNumber(
-      requiredTransferTotal
-    )} mL。`
-  );
+inspection:{
+    mistakes:[],
+    found:[],
+    passed:false
 }
 
-        const incompleteTubes=
-          tubes.filter(
-            tube=>
-              !tube.filled||
-              !this.approximatelyEqual(
-                tube.transferredVolume,
-                tube.volume,
-                .1
-              )
-          );
+generateInspection(){
 
-        if(incompleteTubes.length>0){
+    const pool=[
 
-          internalErrors.push(
-            `Tube ${incompleteTubes
-              .map(
-                tube=>tube.id
-              )
-              .join("、")} 的分裝容量不完整。`
-          );
+        {
+            id:"microscope",
+            title:"Microscope",
+            image:"microscope_on.png"
+        },
+
+        {
+            id:"uv",
+            title:"UV Cabinet",
+            image:"uv_on.png"
+        },
+
+        {
+            id:"pipette",
+            title:"Pipette",
+            image:"pipette_horizontal.png"
+        },
+
+        {
+            id:"chair",
+            title:"Chair",
+            image:"chair_out.png"
+        },
+
+        {
+            id:"gloves",
+            title:"Gloves",
+            image:"gloves_on_bench.png"
+        },
+
+        {
+            id:"biohazard",
+            title:"Biohazard",
+            image:"biohazard_open.png"
+        },
+
+        {
+            id:"centrifuge",
+            title:"Centrifuge",
+            image:"centrifuge_open.png"
+        },
+
+        {
+            id:"ethanol",
+            title:"Ethanol",
+            image:"ethanol_open.png"
         }
 
+    ];
 
-        /******************************************************************
-         * 再次驗證 Round 3
-         ******************************************************************/
-
-        if(
-          !state.centrifuge?.passed||
-          !state.centrifuge?.started
-        ){
-
-          internalErrors.push(
-            "離心操作紀錄不完整。"
-          );
-        }
-
-
-        /******************************************************************
-         * 再次驗證 Round 4
-         ******************************************************************/
-
-        if(!state.labeling?.passed){
-
-          internalErrors.push(
-            "Complete DMEM 標籤尚未通過確認。"
-          );
-        }
-
-        const normalizedStorage=
-          String(
-            label.storage||""
-          )
-            .replaceAll(
-              " ",
-              ""
-            )
-            .replaceAll(
-              "°",
-              ""
-            )
-            .toUpperCase();
-
-        if(
-          label.mediumName!=="Complete DMEM"||
-          label.totalVolume!==
-            `${this.displayNumber(
-              state.totalVolume
-            )} mL`||
-          label.fbs!=="10% FBS"||
-          label.penStrep!=="1% Pen/Strep"||
-          !label.preparationDate||
-          !/^[A-Z]{2,6}$/.test(
-            label.operatorInitials||""
-          )||
-          normalizedStorage!=="4C"
-        ){
-
-          internalErrors.push(
-            "Complete DMEM 標籤內容與批次紀錄不一致。"
-          );
-        }
-
-
-        /******************************************************************
-         * 未選擇全部正確項目
-         ******************************************************************/
-
-        if(missingRequiredItems.length>0){
-
-          const missingTitles=
-            inspectionItems
-              .filter(
-                item=>
-                  missingRequiredItems.includes(
-                    item.id
-                  )
-              )
-              .map(
-                item=>item.title
-              );
-
-          internalErrors.push(
-            `遺漏必要檢查項目：${missingTitles.join(
-              "、"
-            )}。`
-          );
-        }
-
-
-        /******************************************************************
-         * 選擇錯誤項目
-         ******************************************************************/
-
-        if(selectedWrongItems.length>0){
-
-          const wrongTitles=
-            inspectionItems
-              .filter(
-                item=>
-                  selectedWrongItems.includes(
-                    item.id
-                  )
-              )
-              .map(
-                item=>item.title
-              );
-
-          internalErrors.push(
-            `選擇了錯誤敘述：${wrongTitles.join(
-              "、"
-            )}。`
-          );
-        }
-
-
-        /******************************************************************
-         * Final Inspection 失敗
-         ******************************************************************/
-
-        if(internalErrors.length>0){
-
-          inspection.passed=false;
-
-          this.failMission(
-            ctx,
-            [
-              ...internalErrors,
-              "最終品質檢查未通過，本批 Complete DMEM 不得釋出使用。"
-            ],
-            {
-              penalties:[
-                {
-                  metric:"accuracy",
-                  amount:100,
-                  message:
-                    "Final Inspection 判斷錯誤或批次紀錄不一致。"
-                },
-                {
-                  metric:"sampleQuality",
-                  amount:100,
-                  message:
-                    "未通過品質檢查的 Complete DMEM 不得用於細胞培養。"
-                },
-                {
-                  metric:"safety",
-                  amount:100,
-                  message:
-                    "錯誤的最終檢查可能造成實驗材料誤用。"
-                }
-              ]
-            }
-          );
-
-          return;
-        }
-
-
-        /******************************************************************
-         * Final Inspection 成功
-         ******************************************************************/
-
-        locked=true;
-
-        inspection.passed=true;
-
-        inspection.postponed=false;
-
-        inspection.selectedItems=[
-          ...requiredItemIds
-        ];
-
-        inspection.completedAt=
-          new Date().toISOString();
-
-        confirmButton.disabled=true;
-
-        ctx.stage
-          .querySelectorAll(
-            "button,input"
-          )
-          .forEach(
-            control=>{
-
-              control.disabled=true;
-            }
-          );
-
-        ctx.stage
-          .querySelectorAll(
-            "[data-boss20-inspection-item]"
-          )
-          .forEach(
-            button=>{
-
-              const itemId=
-                button.dataset
-                  .boss20InspectionItem;
-
-              button.classList.remove(
-                "selected",
-                "inspection-correct",
-                "inspection-wrong"
-              );
-
-              if(
-                requiredItemIds.includes(
-                  itemId
-                )
-              ){
-
-                button.classList.add(
-                  "selected",
-                  "inspection-correct"
-                );
-
-              }else{
-
-                button.classList.add(
-                  "inspection-wrong"
-                );
-              }
-            }
-          );
-
-        const progressText=
-          ctx.stage.querySelector(
-            "#boss20InspectionProgress"
-          );
-
-        if(progressText){
-
-          progressText.textContent=
-            `${requiredItemIds.length} / ${requiredItemIds.length}`;
-        }
-
-        const progressBar=
-          ctx.stage.querySelector(
-            "#boss20InspectionProgressBar"
-          );
-
-        if(progressBar){
-
-          progressBar.style.width=
-            "100%";
-        }
-
-        setMessage(
-          `
-            <strong>Final Inspection Passed</strong>
-            <span>
-              Complete DMEM 配製、分裝、離心、標籤與保存條件均已確認。
-              本批次品質檢查完成。
-            </span>
-          `,
-          "success"
+    return this.shuffle(pool)
+        .slice(
+            0,
+            this.randomInt(3,5)
         );
 
-        this.completeRound(
-          ctx,
-          1200
-        );
+}
+
+inspectionCard(item){
+
+return `
+
+<button
+class="inspection-card"
+data-inspection="${item.id}"
+>
+
+<img
+src="assets/lab/${item.image}"
+>
+
+<div>
+
+${item.title}
+
+</div>
+
+</button>
+
+`;
+
+}
+
+const inspection=
+state.inspection;
+
+if(
+inspection.mistakes.length===0
+){
+
+inspection.mistakes=
+this.generateInspection();
+
+}
+
+const mistakes=
+inspection.mistakes;
+
+const cards=
+mistakes
+.map(
+item=>
+this.inspectionCard(item)
+)
+.join("");
+
+<div class="inspection-grid">
+
+${cards}
+
+</div>
+
+
+ctx.stage
+
+.querySelectorAll(
+".inspection-card"
+)
+
+.forEach(card=>{
+
+card.onclick=()=>{
+
+const id=
+card.dataset.inspection;
+
+if(
+inspection.found.includes(id)
+){
+return;
+}
+
+inspection.found.push(id);
+
+card.classList.add(
+"found"
+);
+
+checkFinish();
+
+};
+
+});
+
+
+const checkFinish=()=>{
+
+if(
+
+inspection.found.length===
+
+mistakes.length
+
+){
+
+inspection.passed=true;
+
+this.completeRound(
+ctx,
+1200
+);
+
+}
+
+};
+
       }
     );
   }
