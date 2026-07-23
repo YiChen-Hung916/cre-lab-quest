@@ -6393,6 +6393,12 @@ if(
         item=>item.id
       );
 
+    const sceneHtml=
+  this.renderInspectionScene(
+    mistakeIds,
+    inspection.found
+  );
+
     let locked=false;
 
 
@@ -6560,6 +6566,8 @@ if(
         )
         .join("");
 
+      **********************************************************************/
+
 
     /**********************************************************************
      * Round 5 主畫面
@@ -6683,10 +6691,11 @@ if(
               </div>
 
               <div
-                id="boss20InspectionGrid"
-                class="boss20-inspection-grid"
-              >
-                ${cardsHtml}
+  id="boss20InspectionSceneHost"
+  class="boss20-inspection-scene-host"
+>
+  ${sceneHtml}
+</div>
               </div>
 
             </section>
@@ -6767,6 +6776,16 @@ if(
                   "true"
                 );
 
+
+                const label=
+                  card.querySelector(
+                    ".boss20-inspection-hotspot-label"
+                  );
+
+                if(label){
+                  label.textContent="✓";
+                }
+                
                 const badge=
                   card.querySelector(
                     ".boss20-inspection-badge"
@@ -6911,95 +6930,202 @@ if(
    * Round 5：固定實驗室物件
    **************************************************************************/
 
-  getInspectionObjects(){
+getInspectionObjects(){
 
-    return[
-      {
-        id:"microscope",
-        title:"Microscope",
-        icon:"🔬",
-        normalText:"電源關閉並覆蓋防塵罩",
-        issueText:"顯微鏡電源仍開啟"
-      },
-      {
-        id:"uv",
-        title:"UV Cabinet",
-        icon:"☀️",
-        normalText:"UV 燈已關閉",
-        issueText:"UV 燈仍在運作"
-      },
-      {
-        id:"pipette",
-        title:"Pipette Rack",
-        icon:"🧪",
-        normalText:"Pipette 直立放回支架",
-        issueText:"Pipette 橫放在工作臺上"
-      },
-      {
-        id:"centrifuge",
-        title:"Centrifuge",
-        icon:"⚙️",
-        normalText:"上蓋關閉且設備停止",
-        issueText:"離心機上蓋未關閉"
-      },
-      {
-        id:"cultureBottle",
-        title:"Culture Bottle",
-        icon:"🧴",
-        normalText:"瓶蓋鎖緊且標籤完整",
-        issueText:"培養瓶瓶蓋鬆開"
-      },
-      {
-        id:"ethanol",
-        title:"Ethanol Bottle",
-        icon:"🧴",
-        normalText:"瓶蓋已關閉",
-        issueText:"酒精瓶未關閉"
-      },
-      {
-        id:"biohazard",
-        title:"Biohazard Bin",
-        icon:"☣️",
-        normalText:"感染性廢棄物桶已關閉",
-        issueText:"感染性廢棄物桶蓋開啟"
-      },
-      {
-        id:"sharps",
-        title:"Sharps Box",
-        icon:"📦",
-        normalText:"尖銳物收集盒容量正常",
-        issueText:"尖銳物收集盒已過度裝滿"
-      },
-      {
-        id:"gloves",
-        title:"Used Gloves",
-        icon:"🧤",
-        normalText:"使用過的手套已正確丟棄",
-        issueText:"使用過的手套留在工作臺"
-      },
-      {
-        id:"chair",
-        title:"Chair",
-        icon:"🪑",
-        normalText:"椅子已推回工作臺下方",
-        issueText:"椅子留在走道上"
-      },
-      {
-        id:"notebook",
-        title:"Lab Notebook",
-        icon:"📘",
-        normalText:"實驗紀錄已完成",
-        issueText:"實驗紀錄尚未完成"
-      },
-      {
-        id:"door",
-        title:"Laboratory Door",
-        icon:"🚪",
-        normalText:"實驗室門已關閉",
-        issueText:"實驗室門仍開啟"
+  return[
+    {
+      id:"microscope",
+      title:"Microscope",
+      normalText:"顯微鏡電源已關閉",
+      issueText:"顯微鏡電源仍開啟",
+      errorImage:
+        "assets/lab-inspection/01_microscope-error.png",
+
+      hotspot:{
+        left:7.16,
+        top:35.64,
+        width:13.02,
+        height:25.39
       }
-    ];
-  },
+    },
+
+    {
+      id:"uv",
+      title:"UV Cabinet",
+      normalText:"UV 燈已關閉",
+      issueText:"UV 燈仍開啟",
+      errorImage:
+        "assets/lab-inspection/02_uvcabinet-error.png",
+
+      hotspot:{
+        left:23.11,
+        top:23.93,
+        width:25.07,
+        height:18.55
+      }
+    },
+
+    {
+      id:"pipette",
+      title:"Pipette Rack",
+      normalText:"Pipette 直立放回支架",
+      issueText:"Pipette 橫放在工作臺上",
+      errorImage:
+        "assets/lab-inspection/03_pipetterack-error.png",
+
+      hotspot:{
+        left:22.79,
+        top:41.02,
+        width:19.21,
+        height:22.95
+      }
+    },
+
+    {
+      id:"centrifuge",
+      title:"Centrifuge",
+      normalText:"上蓋關閉且設備停止",
+      issueText:"離心機仍在運行",
+      errorImage:
+        "assets/lab-inspection/04_centrifuge-error.png",
+
+      hotspot:{
+        left:61.20,
+        top:39.55,
+        width:14.97,
+        height:21.48
+      }
+    },
+
+    {
+      id:"cultureBottle",
+      title:"Culture Bottle",
+      normalText:"瓶蓋鎖緊且標籤完整",
+      issueText:"瓶蓋鬆開或缺少標籤",
+      errorImage:
+        "assets/lab-inspection/05_culturebottle-error.png",
+
+      hotspot:{
+        left:39.06,
+        top:45.41,
+        width:7.49,
+        height:15.63
+      }
+    },
+
+    {
+      id:"ethanol",
+      title:"Ethanol Bottle",
+      normalText:"酒精瓶已關閉",
+      issueText:"酒精瓶未關閉",
+      errorImage:
+        "assets/lab-inspection/06_ethanol-error.png",
+
+      hotspot:{
+        left:44.92,
+        top:45.90,
+        width:8.46,
+        height:15.63
+      }
+    },
+
+    {
+      id:"biohazard",
+      title:"Biohazard Bin",
+      normalText:"感染性廢棄物桶已關閉",
+      issueText:"感染性廢棄物桶未關閉",
+      errorImage:
+        "assets/lab-inspection/07_biohazard-error.png",
+
+      hotspot:{
+        left:79.43,
+        top:63.48,
+        width:13.67,
+        height:30.27
+      }
+    },
+
+    {
+      id:"sharps",
+      title:"Sharps Box",
+      normalText:"尖銳物收集盒容量正常",
+      issueText:"尖銳物收集盒已過度裝滿",
+      errorImage:
+        "assets/lab-inspection/08_sharps-error.png",
+
+      hotspot:{
+        left:71.61,
+        top:63.48,
+        width:11.07,
+        height:30.76
+      }
+    },
+
+    {
+      id:"gloves",
+      title:"Used Gloves",
+      normalText:"使用過的手套已正確丟棄",
+      issueText:"使用過的手套留在工作臺上",
+      errorImage:
+        "assets/lab-inspection/09_gloves-error.png",
+
+      hotspot:{
+        left:51.76,
+        top:57.13,
+        width:11.07,
+        height:11.23
+      }
+    },
+
+    {
+      id:"chair",
+      title:"Chair",
+      normalText:"椅子已推回工作臺下方",
+      issueText:"椅子擋住走道",
+      errorImage:
+        "assets/lab-inspection/10_chair-error.png",
+
+      hotspot:{
+        left:20.51,
+        top:67.38,
+        width:23.76,
+        height:32.62
+      }
+    },
+
+    {
+      id:"notebook",
+      title:"Lab Notebook",
+      normalText:"實驗紀錄已完成",
+      issueText:"實驗紀錄尚未完成",
+      errorImage:
+        "assets/lab-inspection/11_notebook-error.png",
+
+      hotspot:{
+        left:48.18,
+        top:53.22,
+        width:14.97,
+        height:13.18
+      }
+    },
+
+    {
+      id:"door",
+      title:"Laboratory Door",
+      normalText:"實驗室門已關閉",
+      issueText:"實驗室門仍開啟",
+      errorImage:
+        "assets/lab-inspection/12_door-error.png",
+
+      hotspot:{
+        left:81.38,
+        top:11.23,
+        width:18.62,
+        height:53.22
+      }
+    }
+  ];
+},
 
 
   /**************************************************************************
@@ -7036,6 +7162,123 @@ if(
    * Round 5：建立單一實驗室物件卡片
    **************************************************************************/
 
+  renderInspectionScene(
+  mistakeIds,
+  foundIds=[]
+){
+
+  const objects=
+    this.getInspectionObjects();
+
+  /*
+   * 只載入本次抽到的 Error Pieces。
+   */
+  const errorLayers=
+    objects
+      .filter(
+        item=>
+          mistakeIds.includes(
+            item.id
+          )
+      )
+      .map(
+        item=>`
+          <img
+            class="
+              boss20-inspection-error-layer
+              boss20-inspection-layer-${item.id}
+            "
+            src="${item.errorImage}"
+            alt=""
+            aria-hidden="true"
+            draggable="false"
+          >
+        `
+      )
+      .join("");
+
+  /*
+   * 12 個透明 Hotspot 永遠存在，
+   * 玩家直接點擊場景中的物件。
+   */
+  const hotspots=
+    objects
+      .map(
+        item=>{
+
+          const hotspot=
+            item.hotspot;
+
+          const found=
+            foundIds.includes(
+              item.id
+            );
+
+          return`
+            <button
+              type="button"
+              class="
+                boss20-inspection-hotspot
+                ${found?"found":""}
+              "
+              data-inspection-object="${item.id}"
+              aria-label="檢查 ${
+                this.escapeHtml(
+                  item.title
+                )
+              }"
+              aria-pressed="${
+                found
+                  ?"true"
+                  :"false"
+              }"
+              style="
+                left:${hotspot.left}%;
+                top:${hotspot.top}%;
+                width:${hotspot.width}%;
+                height:${hotspot.height}%;
+              "
+            >
+
+              <span
+                class="boss20-inspection-hotspot-label"
+              >
+                ${
+                  found
+                    ?"✓"
+                    :""
+                }
+              </span>
+
+            </button>
+          `;
+        }
+      )
+      .join("");
+
+  return`
+    <div class="boss20-inspection-scene">
+
+      <img
+        class="boss20-inspection-background"
+        src="
+          assets/lab-inspection/background-normal.png
+        "
+        alt="實驗室安全檢查場景"
+        draggable="false"
+      >
+
+      ${errorLayers}
+
+      <div class="boss20-inspection-hotspot-layer">
+        ${hotspots}
+      </div>
+
+    </div>
+  `;
+},
+
+  
   inspectionCard(
     item,
     options={}
