@@ -1,0 +1,86 @@
+{
+  "microscope": {
+    "file": "01_microscope-error.png",
+    "x": 110,
+    "y": 365,
+    "w": 200,
+    "h": 260
+  },
+  "uv": {
+    "file": "02_uvcabinet-error.png",
+    "x": 355,
+    "y": 245,
+    "w": 385,
+    "h": 190
+  },
+  "pipette": {
+    "file": "03_pipetterack-error.png",
+    "x": 350,
+    "y": 420,
+    "w": 295,
+    "h": 235
+  },
+  "centrifuge": {
+    "file": "04_centrifuge-error.png",
+    "x": 940,
+    "y": 405,
+    "w": 230,
+    "h": 220
+  },
+  "cultureBottle": {
+    "file": "05_culturebottle-error.png",
+    "x": 600,
+    "y": 465,
+    "w": 115,
+    "h": 160
+  },
+  "ethanol": {
+    "file": "06_ethanol-error.png",
+    "x": 690,
+    "y": 470,
+    "w": 130,
+    "h": 160
+  },
+  "biohazard": {
+    "file": "07_biohazard-error.png",
+    "x": 1220,
+    "y": 650,
+    "w": 210,
+    "h": 310
+  },
+  "sharps": {
+    "file": "08_sharps-error.png",
+    "x": 1100,
+    "y": 650,
+    "w": 170,
+    "h": 315
+  },
+  "gloves": {
+    "file": "09_gloves-error.png",
+    "x": 795,
+    "y": 585,
+    "w": 170,
+    "h": 115
+  },
+  "chair": {
+    "file": "10_chair-error.png",
+    "x": 315,
+    "y": 690,
+    "w": 365,
+    "h": 334
+  },
+  "notebook": {
+    "file": "11_notebook-error.png",
+    "x": 740,
+    "y": 545,
+    "w": 230,
+    "h": 135
+  },
+  "door": {
+    "file": "12_door-error.png",
+    "x": 1250,
+    "y": 115,
+    "w": 286,
+    "h": 545
+  }
+}
