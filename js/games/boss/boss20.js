@@ -206,6 +206,7 @@ const Boss20={
     found:[],
 
     mistakes:[],
+    wrongClicks:[],
 
     passed:false
 
@@ -6310,188 +6311,821 @@ if(
 
   /**************************************************************************
    * ROUND 5
-   * Final Inspection
+   * Lab Inspection
    **************************************************************************/
 
-inspection:{
-    mistakes:[],
-    found:[],
-    passed:false
-}
+  round5(ctx){
 
-generateInspection(){
+    const state=
+      this.state;
 
-    const pool=[
+    state.currentRound=5;
 
+    /*
+     * Round 4 未完成時，不允許進入最終檢查。
+     */
+    if(
+      !state.labeling||
+      !state.labeling.passed
+    ){
+
+      this.failMission(
+        ctx,
+        [
+          "Round 4 的 Complete DMEM 標籤尚未正確完成。",
+          "無法開始離開實驗室前的安全檢查。"
+        ],
         {
-            id:"microscope",
-            title:"Microscope",
-            image:"microscope_on.png"
-        },
-
-        {
-            id:"uv",
-            title:"UV Cabinet",
-            image:"uv_on.png"
-        },
-
-        {
-            id:"pipette",
-            title:"Pipette",
-            image:"pipette_horizontal.png"
-        },
-
-        {
-            id:"chair",
-            title:"Chair",
-            image:"chair_out.png"
-        },
-
-        {
-            id:"gloves",
-            title:"Gloves",
-            image:"gloves_on_bench.png"
-        },
-
-        {
-            id:"biohazard",
-            title:"Biohazard",
-            image:"biohazard_open.png"
-        },
-
-        {
-            id:"centrifuge",
-            title:"Centrifuge",
-            image:"centrifuge_open.png"
-        },
-
-        {
-            id:"ethanol",
-            title:"Ethanol",
-            image:"ethanol_open.png"
+          penalties:[]
         }
+      );
 
-    ];
+      return;
+    }
 
-    return this.shuffle(pool)
-        .slice(
-            0,
-            this.randomInt(3,5)
+    /*
+     * 保證舊存檔或舊 state 也能正常使用。
+     */
+    if(!state.inspection){
+
+      state.inspection={
+        mistakes:[],
+        found:[],
+        wrongClicks:[],
+        passed:false
+      };
+    }
+
+    const inspection=
+      state.inspection;
+
+    if(!Array.isArray(inspection.mistakes)){
+      inspection.mistakes=[];
+    }
+
+    if(!Array.isArray(inspection.found)){
+      inspection.found=[];
+    }
+
+    if(!Array.isArray(inspection.wrongClicks)){
+      inspection.wrongClicks=[];
+    }
+
+    /*
+     * 第一次載入 Round 5 時：
+     * 從固定實驗室物件中隨機選出 3–5 個錯誤。
+     */
+    if(inspection.mistakes.length===0){
+
+      inspection.mistakes=
+        this.generateInspection();
+
+      inspection.found=[];
+      inspection.wrongClicks=[];
+      inspection.passed=false;
+    }
+
+    const objects=
+      this.getInspectionObjects();
+
+    const mistakeIds=
+      inspection.mistakes.map(
+        item=>item.id
+      );
+
+    let locked=false;
+
+
+    /**********************************************************************
+     * 設定提示訊息
+     **********************************************************************/
+
+    const setMessage=(
+      message,
+      type=""
+    )=>{
+
+      const messageBox=
+        ctx.stage.querySelector(
+          "#boss20InspectionMessage"
         );
 
-}
-
-inspectionCard(item){
-
-return `
-
-<button
-class="inspection-card"
-data-inspection="${item.id}"
->
-
-<img
-src="assets/lab/${item.image}"
->
-
-<div>
-
-${item.title}
-
-</div>
-
-</button>
-
-`;
-
-}
-
-const inspection=
-state.inspection;
-
-if(
-inspection.mistakes.length===0
-){
-
-inspection.mistakes=
-this.generateInspection();
-
-}
-
-const mistakes=
-inspection.mistakes;
-
-const cards=
-mistakes
-.map(
-item=>
-this.inspectionCard(item)
-)
-.join("");
-
-<div class="inspection-grid">
-
-${cards}
-
-</div>
-
-
-ctx.stage
-
-.querySelectorAll(
-".inspection-card"
-)
-
-.forEach(card=>{
-
-card.onclick=()=>{
-
-const id=
-card.dataset.inspection;
-
-if(
-inspection.found.includes(id)
-){
-return;
-}
-
-inspection.found.push(id);
-
-card.classList.add(
-"found"
-);
-
-checkFinish();
-
-};
-
-});
-
-
-const checkFinish=()=>{
-
-if(
-
-inspection.found.length===
-
-mistakes.length
-
-){
-
-inspection.passed=true;
-
-this.completeRound(
-ctx,
-1200
-);
-
-}
-
-};
-
+      if(!messageBox){
+        return;
       }
-    );
+
+      messageBox.classList.remove(
+        "success",
+        "error",
+        "warning"
+      );
+
+      if(type){
+        messageBox.classList.add(type);
+      }
+
+      messageBox.innerHTML=
+        message;
+    };
+
+
+    /**********************************************************************
+     * 更新找到的錯誤數量
+     **********************************************************************/
+
+    const updateProgress=()=>{
+
+      const progressText=
+        ctx.stage.querySelector(
+          "#boss20InspectionProgressText"
+        );
+
+      const progressFill=
+        ctx.stage.querySelector(
+          "#boss20InspectionProgressFill"
+        );
+
+      const foundCount=
+        inspection.found.length;
+
+      const totalCount=
+        inspection.mistakes.length;
+
+      if(progressText){
+
+        progressText.textContent=
+          `${foundCount} / ${totalCount}`;
+      }
+
+      if(progressFill){
+
+        const percentage=
+          totalCount>0
+            ?foundCount/totalCount*100
+            :0;
+
+        progressFill.style.width=
+          `${percentage}%`;
+      }
+    };
+
+
+    /**********************************************************************
+     * 完成判斷
+     **********************************************************************/
+
+    const checkFinish=()=>{
+
+      if(
+        locked||
+        inspection.passed
+      ){
+        return;
+      }
+
+      const allMistakesFound=
+        inspection.mistakes.every(
+          mistake=>
+            inspection.found.includes(
+              mistake.id
+            )
+        );
+
+      if(!allMistakesFound){
+        return;
+      }
+
+      locked=true;
+      inspection.passed=true;
+
+      ctx.stage
+        .querySelectorAll(
+          "[data-inspection-object]"
+        )
+        .forEach(
+          button=>{
+            button.disabled=true;
+          }
+        );
+
+      setMessage(
+        `
+          <strong>
+            Lab inspection completed
+          </strong>
+
+          <span>
+            已找出全部 ${
+              inspection.mistakes.length
+            } 個異常項目，實驗室可以安全關閉。
+          </span>
+        `,
+        "success"
+      );
+
+      this.completeRound(
+        ctx,
+        1200
+      );
+    };
+
+
+    /**********************************************************************
+     * 建立實驗室物件卡片
+     **********************************************************************/
+
+    const cardsHtml=
+      objects
+        .map(
+          item=>
+            this.inspectionCard(
+              item,
+              {
+                isMistake:
+                  mistakeIds.includes(
+                    item.id
+                  ),
+
+                found:
+                  inspection.found.includes(
+                    item.id
+                  ),
+
+                wrong:
+                  inspection.wrongClicks.includes(
+                    item.id
+                  )
+              }
+            )
+        )
+        .join("");
+
+
+    /**********************************************************************
+     * Round 5 主畫面
+     **********************************************************************/
+
+    ctx.stage.innerHTML=
+      this.game.shell(
+        "Boss Mission：Lab Inspection",
+
+        `
+          離開實驗室前，請檢查所有設備與工作區。
+          本次場景中有
+          ${inspection.mistakes.length}
+          個異常項目。請只點擊不符合安全規範的物件。
+        `,
+
+        `
+          <div class="boss20-round boss20-round5">
+
+            <section class="boss20-task-summary">
+
+              <span class="kicker">
+                FINAL SAFETY INSPECTION
+              </span>
+
+              <div class="boss20-inspection-summary">
+
+                <div>
+
+                  <small>
+                    Inspection target
+                  </small>
+
+                  <strong>
+                    找出 ${
+                      inspection.mistakes.length
+                    } 個異常
+                  </strong>
+
+                </div>
+
+                <div>
+
+                  <small>
+                    Progress
+                  </small>
+
+                  <strong
+                    id="boss20InspectionProgressText"
+                  >
+                    ${
+                      inspection.found.length
+                    }
+                    /
+                    ${
+                      inspection.mistakes.length
+                    }
+                  </strong>
+
+                </div>
+
+                <div>
+
+                  <small>
+                    Wrong selections
+                  </small>
+
+                  <strong
+                    id="boss20InspectionWrongCount"
+                  >
+                    ${
+                      inspection.wrongClicks.length
+                    }
+                  </strong>
+
+                </div>
+
+              </div>
+
+              <div class="boss20-inspection-progress">
+
+                <div
+                  id="boss20InspectionProgressFill"
+                  class="boss20-inspection-progress-fill"
+                  style="
+                    width:${
+                      inspection.mistakes.length>0
+                        ?inspection.found.length/
+                          inspection.mistakes.length*
+                          100
+                        :0
+                    }%
+                  "
+                ></div>
+
+              </div>
+
+            </section>
+
+
+            <section class="boss20-inspection-panel">
+
+              <div class="boss20-section-heading">
+
+                <div>
+
+                  <span class="kicker">
+                    LABORATORY
+                  </span>
+
+                  <strong>
+                    點擊你認為有異常的物件
+                  </strong>
+
+                </div>
+
+                <small>
+                  正常物件不需要點擊
+                </small>
+
+              </div>
+
+              <div
+                id="boss20InspectionGrid"
+                class="boss20-inspection-grid"
+              >
+                ${cardsHtml}
+              </div>
+
+            </section>
+
+
+            <div
+              id="boss20InspectionMessage"
+              class="notice"
+              aria-live="polite"
+            >
+              請仔細查看整個實驗室。只有部分物件處於異常狀態。
+            </div>
+
+          </div>
+        `
+      );
+
+
+    /**********************************************************************
+     * 物件點擊事件
+     **********************************************************************/
+
+    ctx.stage
+      .querySelectorAll(
+        "[data-inspection-object]"
+      )
+      .forEach(
+        card=>{
+
+          card.addEventListener(
+            "click",
+            ()=>{
+
+              if(
+                locked||
+                inspection.passed||
+                this.missionFailed
+              ){
+                return;
+              }
+
+              const id=
+                card.dataset.inspectionObject;
+
+              const item=
+                objects.find(
+                  object=>
+                    object.id===id
+                );
+
+              if(!item){
+                return;
+              }
+
+              const isMistake=
+                mistakeIds.includes(id);
+
+
+              /*
+               * 點擊真正的異常物件。
+               */
+              if(isMistake){
+
+                if(
+                  inspection.found.includes(id)
+                ){
+                  return;
+                }
+
+                inspection.found.push(id);
+
+                card.classList.add(
+                  "found"
+                );
+
+                card.setAttribute(
+                  "aria-pressed",
+                  "true"
+                );
+
+                const badge=
+                  card.querySelector(
+                    ".boss20-inspection-badge"
+                  );
+
+                if(badge){
+                  badge.textContent="已發現";
+                }
+
+                const status=
+                  card.querySelector(
+                    ".boss20-inspection-status"
+                  );
+
+                if(status){
+
+                  status.textContent=
+                    item.issueText;
+                }
+
+                updateProgress();
+
+                setMessage(
+                  `
+                    <strong>
+                      發現異常：${
+                        this.escapeHtml(
+                          item.title
+                        )
+                      }
+                    </strong>
+
+                    <span>
+                      ${
+                        this.escapeHtml(
+                          item.issueText
+                        )
+                      }
+                    </span>
+                  `,
+                  "success"
+                );
+
+                checkFinish();
+
+                return;
+              }
+
+
+              /*
+               * 點擊正常物件。
+               */
+              if(
+                inspection.wrongClicks.includes(id)
+              ){
+
+                setMessage(
+                  `
+                    <strong>
+                      此物件已確認為正常
+                    </strong>
+
+                    <span>
+                      請繼續檢查其他尚未確認的物件。
+                    </span>
+                  `,
+                  "warning"
+                );
+
+                return;
+              }
+
+              inspection.wrongClicks.push(id);
+
+              card.classList.add(
+                "wrong-selection"
+              );
+
+              const wrongCount=
+                ctx.stage.querySelector(
+                  "#boss20InspectionWrongCount"
+                );
+
+              if(wrongCount){
+
+                wrongCount.textContent=
+                  String(
+                    inspection.wrongClicks.length
+                  );
+              }
+
+              ctx.penalize(
+                "safety",
+                8,
+                `錯誤判定正常物件：${item.title}。`
+              );
+
+              setMessage(
+                `
+                  <strong>
+                    ${
+                      this.escapeHtml(
+                        item.title
+                      )
+                    } 沒有異常
+                  </strong>
+
+                  <span>
+                    誤判正常設備會干擾關閉流程，Safety 扣 8 分。
+                  </span>
+                `,
+                "warning"
+              );
+            }
+          );
+        }
+      );
+
+
+    /*
+     * 重新進入已完成的 Round 5 時，
+     * 直接保持完成狀態。
+     */
+    if(inspection.passed){
+
+      locked=true;
+
+      ctx.stage
+        .querySelectorAll(
+          "[data-inspection-object]"
+        )
+        .forEach(
+          button=>{
+            button.disabled=true;
+          }
+        );
+    }
+  },
+
+
+  /**************************************************************************
+   * Round 5：固定實驗室物件
+   **************************************************************************/
+
+  getInspectionObjects(){
+
+    return[
+      {
+        id:"microscope",
+        title:"Microscope",
+        icon:"🔬",
+        normalText:"電源關閉並覆蓋防塵罩",
+        issueText:"顯微鏡電源仍開啟"
+      },
+      {
+        id:"uv",
+        title:"UV Cabinet",
+        icon:"☀️",
+        normalText:"UV 燈已關閉",
+        issueText:"UV 燈仍在運作"
+      },
+      {
+        id:"pipette",
+        title:"Pipette Rack",
+        icon:"🧪",
+        normalText:"Pipette 直立放回支架",
+        issueText:"Pipette 橫放在工作臺上"
+      },
+      {
+        id:"centrifuge",
+        title:"Centrifuge",
+        icon:"⚙️",
+        normalText:"上蓋關閉且設備停止",
+        issueText:"離心機上蓋未關閉"
+      },
+      {
+        id:"cultureBottle",
+        title:"Culture Bottle",
+        icon:"🧴",
+        normalText:"瓶蓋鎖緊且標籤完整",
+        issueText:"培養瓶瓶蓋鬆開"
+      },
+      {
+        id:"ethanol",
+        title:"Ethanol Bottle",
+        icon:"🧴",
+        normalText:"瓶蓋已關閉",
+        issueText:"酒精瓶未關閉"
+      },
+      {
+        id:"biohazard",
+        title:"Biohazard Bin",
+        icon:"☣️",
+        normalText:"感染性廢棄物桶已關閉",
+        issueText:"感染性廢棄物桶蓋開啟"
+      },
+      {
+        id:"sharps",
+        title:"Sharps Box",
+        icon:"📦",
+        normalText:"尖銳物收集盒容量正常",
+        issueText:"尖銳物收集盒已過度裝滿"
+      },
+      {
+        id:"gloves",
+        title:"Used Gloves",
+        icon:"🧤",
+        normalText:"使用過的手套已正確丟棄",
+        issueText:"使用過的手套留在工作臺"
+      },
+      {
+        id:"chair",
+        title:"Chair",
+        icon:"🪑",
+        normalText:"椅子已推回工作臺下方",
+        issueText:"椅子留在走道上"
+      },
+      {
+        id:"notebook",
+        title:"Lab Notebook",
+        icon:"📘",
+        normalText:"實驗紀錄已完成",
+        issueText:"實驗紀錄尚未完成"
+      },
+      {
+        id:"door",
+        title:"Laboratory Door",
+        icon:"🚪",
+        normalText:"實驗室門已關閉",
+        issueText:"實驗室門仍開啟"
+      }
+    ];
+  },
+
+
+  /**************************************************************************
+   * Round 5：隨機產生 3–5 個異常
+   **************************************************************************/
+
+  generateInspection(){
+
+    const pool=
+      this.getInspectionObjects();
+
+    const mistakeCount=
+      this.randomInt(
+        3,
+        5
+      );
+
+    return this.shuffle(pool)
+      .slice(
+        0,
+        mistakeCount
+      )
+      .map(
+        item=>({
+          id:item.id,
+          title:item.title,
+          issueText:item.issueText
+        })
+      );
+  },
+
+
+  /**************************************************************************
+   * Round 5：建立單一實驗室物件卡片
+   **************************************************************************/
+
+  inspectionCard(
+    item,
+    options={}
+  ){
+
+    const isMistake=
+      Boolean(
+        options.isMistake
+      );
+
+    const found=
+      Boolean(
+        options.found
+      );
+
+    const wrong=
+      Boolean(
+        options.wrong
+      );
+
+    /*
+     * 畫面會依照 isMistake 顯示正常或異常狀態，
+     * 但不直接告訴玩家答案。
+     */
+    const visibleStatus=
+      isMistake
+        ?item.issueText
+        :item.normalText;
+
+    return`
+      <button
+        type="button"
+        class="
+          boss20-inspection-card
+          ${found?"found":""}
+          ${wrong?"wrong-selection":""}
+        "
+        data-inspection-object="${
+          this.escapeHtml(
+            item.id
+          )
+        }"
+        aria-pressed="${
+          found
+            ?"true"
+            :"false"
+        }"
+      >
+
+        <span
+          class="boss20-inspection-icon"
+          aria-hidden="true"
+        >
+          ${item.icon}
+        </span>
+
+        <span class="boss20-inspection-card-copy">
+
+          <strong>
+            ${
+              this.escapeHtml(
+                item.title
+              )
+            }
+          </strong>
+
+          <small
+            class="boss20-inspection-status"
+          >
+            ${
+              this.escapeHtml(
+                visibleStatus
+              )
+            }
+          </small>
+
+        </span>
+
+        <span class="boss20-inspection-badge">
+          ${
+            found
+              ?"已發現"
+              :"檢查"
+          }
+        </span>
+
+      </button>
+    `;
   }
+
 };
 
 /*
